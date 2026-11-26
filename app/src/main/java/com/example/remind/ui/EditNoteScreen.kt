@@ -474,6 +474,7 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
  * Notes field with a small formatting bar (bold, italic, underline, bullet and
  * numbered lists) and a handle below it to drag the box taller or shorter.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NotesEditor(vm: EditNoteViewModel) {
     val state = rememberRichTextState()
