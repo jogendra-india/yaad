@@ -1,5 +1,8 @@
 package com.example.remind.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.interaction.MutableInteractionSource
+
 import com.example.remind.tr
 
 import android.Manifest
@@ -128,19 +131,18 @@ fun HandwritingDialog(store: AttachmentStore, onDismiss: () -> Unit, onSaved: (S
         onSaved(name)
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            dismissOnClickOutside = false,
-            decorFitsSystemWindows = false,
-        ),
-    ) {
+    BackHandler(onBack = onDismiss)
+    // Drawn over the editor screen rather than in a Dialog window: a dialog window
+    // does not get the activity's edge-to-edge insets, which hid the bottom tools.
+    run {
         Column(
             Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface)
-                .systemBarsPadding(),
+                // swallow taps so nothing underneath reacts
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                .systemBarsPadding()
+                .padding(bottom = 8.dp),
         ) {
             Row(
                 Modifier

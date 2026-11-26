@@ -1,5 +1,24 @@
 package com.example.remind.ui
 
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.FormatUnderlined
+import androidx.compose.material.icons.filled.FormatListNumbered
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -151,7 +170,9 @@ class EditNoteViewModel(private val repo: Repository, state: SavedStateHandle) :
      * from the notes, the keywords, or the attachment type and date.
      */
     private fun autoTitle(): String {
-        body.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() }?.let { return it.take(60) }
+        RichNotes.plain(body).lineSequence()
+            .map { line -> line.removePrefix(RichNotes.listPrefix(line) ?: "").trim() }
+            .firstOrNull { it.isNotEmpty() }?.let { return it.take(60) }
         if (keywords.isNotEmpty()) return keywords.take(3).joinToString(", ")
         val kind = when (attachments.firstOrNull()?.type) {
             AttachmentType.PHOTO -> "Photo"
@@ -308,28 +329,26 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            SubjectField(vm)
-
-            OutlinedTextField(
-                value = vm.keywordInput,
-                onValueChange = {
-                    if (it.endsWith(",")) {
-                        vm.keywordInput = it
-                        vm.commitKeywordInput()
-                    } else {
-                        vm.keywordInput = it
-                    }
-                },
-                label = { Text("Keywords") },
-                placeholder = { Text(tr("Likho, comma ya Enter se add", "Type, add with comma or Enter")) },
-                supportingText = {
-                    Text(tr("Yaad karne ke hint: revision me jawab ke saath dikhte hain, search me bhi kaam aate hain", "Recall hints: shown with the answer when revising, and searchable"))
-                },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { vm.commitKeywordInput() }),
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SubjectField(vm, Modifier.weight(1f))
+                OutlinedTextField(
+                    value = vm.keywordInput,
+                    onValueChange = {
+                        if (it.endsWith(",")) {
+                            vm.keywordInput = it
+                            vm.commitKeywordInput()
+                        } else {
+                            vm.keywordInput = it
+                        }
+                    },
+                    label = { Text("Keywords") },
+                    placeholder = { Text(tr("comma se add", "add with comma")) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { vm.commitKeywordInput() }),
+                    modifier = Modifier.weight(1f),
+                )
+            }
             if (vm.keywords.isNotEmpty()) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     vm.keywords.toList().forEach { word ->
@@ -343,15 +362,7 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
                 }
             }
 
-            OutlinedTextField(
-                value = vm.body,
-                onValueChange = { vm.body = it },
-                label = { Text("Notes") },
-                placeholder = { Text("Short summary, formula, points…") },
-                minLines = 3,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                modifier = Modifier.fillMaxWidth(),
-            )
+            NotesEditor(vm)
 
             Text("Attachments", style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -451,22 +462,82 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
     }
 }
 
+/**
+ * Notes field with a small formatting bar (bold, italic, underline, bullet and
+ * numbered lists) and a handle below it to drag the box taller or shorter.
+ */
+@Composable
+private fun NotesEditor(vm: EditNoteViewModel) {
+    var notes by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(vm.body)) }
+    var boxHeight by rememberSaveable { mutableFloatStateOf(140f) }
+    val density = LocalDensity.current.density
+    val markerColor = MaterialTheme.colorScheme.outline
+    val transformation = remember(markerColor) { RichNotesTransformation(markerColor) }
+
+    fun update(value: TextFieldValue) {
+        notes = value
+        vm.body = value.text
+    }
+
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Notes", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            IconButton(onClick = { update(RichNotes.wrap(notes, "**")) }) { Icon(Icons.Default.FormatBold, contentDescription = "Bold") }
+            IconButton(onClick = { update(RichNotes.wrap(notes, "*")) }) { Icon(Icons.Default.FormatItalic, contentDescription = "Italic") }
+            IconButton(onClick = { update(RichNotes.wrap(notes, "++")) }) { Icon(Icons.Default.FormatUnderlined, contentDescription = "Underline") }
+            IconButton(onClick = { update(RichNotes.toggleList(notes, numberedList = false)) }) {
+                Icon(Icons.AutoMirrored.Filled.FormatListBulleted, contentDescription = "Bullets")
+            }
+            IconButton(onClick = { update(RichNotes.toggleList(notes, numberedList = true)) }) {
+                Icon(Icons.Default.FormatListNumbered, contentDescription = "Numbering")
+            }
+        }
+        OutlinedTextField(
+            value = notes,
+            onValueChange = { update(RichNotes.onEdit(notes, it)) },
+            placeholder = { Text("Short summary, formula, points…") },
+            visualTransformation = transformation,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = boxHeight.dp),
+        )
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(24.dp)
+                .draggable(
+                    orientation = Orientation.Vertical,
+                    state = rememberDraggableState { delta -> boxHeight = (boxHeight + delta / density).coerceIn(96f, 900f) },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                Modifier
+                    .size(width = 48.dp, height = 5.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(3.dp)),
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SubjectField(vm: EditNoteViewModel) {
+private fun SubjectField(vm: EditNoteViewModel, modifier: Modifier = Modifier) {
     val subjects by vm.subjects.collectAsStateWithLifecycle(emptyList())
     var expanded by remember { mutableStateOf(false) }
     val suggestions = subjects.filter { it.contains(vm.subject, ignoreCase = true) && !it.equals(vm.subject, ignoreCase = true) }
 
-    androidx.compose.material3.ExposedDropdownMenuBox(expanded = expanded && suggestions.isNotEmpty(), onExpandedChange = { expanded = it }) {
+    androidx.compose.material3.ExposedDropdownMenuBox(
+        expanded = expanded && suggestions.isNotEmpty(),
+        onExpandedChange = { expanded = it },
+        modifier = modifier,
+    ) {
         OutlinedTextField(
             value = vm.subject,
             onValueChange = { vm.subject = it; expanded = true },
             label = { Text("Deck") },
-            placeholder = { Text("e.g. Physics, DSA, History") },
-            supportingText = {
-                Text(tr("Subject ka group: Home pe notes isi se bante hain, aur deck-wise practice kar sakte ho", "Subject group: notes are grouped by it on Home, and you can practise one deck"))
-            },
+            placeholder = { Text("Physics, DSA…") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
             modifier = Modifier

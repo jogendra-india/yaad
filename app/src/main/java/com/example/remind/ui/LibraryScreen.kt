@@ -109,7 +109,7 @@ class LibraryViewModel(val repo: Repository, state: SavedStateHandle) : ViewMode
             }
             val matchesQuery = terms.isEmpty() ||
                 n.title.lowercase().contains(terms) ||
-                n.body.lowercase().contains(terms) ||
+                RichNotes.plain(n.body).lowercase().contains(terms) ||
                 n.subject.lowercase().contains(terms) ||
                 n.keywords.any { it.lowercase().contains(terms) }
             matchesFilter && matchesQuery

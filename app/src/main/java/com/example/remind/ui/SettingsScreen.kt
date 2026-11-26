@@ -1,5 +1,7 @@
 package com.example.remind.ui
 
+import androidx.compose.material.icons.filled.Alarm
+
 import com.example.remind.notify.DigestScheduler
 
 import androidx.compose.foundation.clickable
@@ -182,7 +184,11 @@ fun SettingsScreen(onBack: () -> Unit, onOpenHistory: () -> Unit, vm: SettingsVi
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
     var pendingImport by remember { mutableStateOf<Uri?>(null) }
     var canNotify by remember { mutableStateOf(Notifications.canPost(context)) }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { canNotify = Notifications.canPost(context) }
+    var canExact by remember { mutableStateOf(canExactAlarms(context)) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        canNotify = Notifications.canPost(context)
+        canExact = canExactAlarms(context)
+    }
 
     val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { canNotify = it }
 
@@ -396,6 +402,32 @@ fun SettingsScreen(onBack: () -> Unit, onOpenHistory: () -> Unit, vm: SettingsVi
                 }
                 }
                 ListItem(
+                    headlineContent = { Text(tr("Exact time pe reminder", "Exact-time reminders")) },
+                    supportingContent = {
+                        Text(
+                            if (canExact) tr("On hai. Iske liye alag permission nahi maangni padti.", "On. No separate permission prompt is needed.")
+                            else tr("Band hai, reminder thoda late aa sakta hai", "Off, reminders may come a little late")
+                        )
+                    },
+                    leadingContent = {
+                        Icon(Icons.Default.Alarm, null, tint = if (canExact) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                    },
+                    trailingContent = if (canExact) null else ({
+                        TextButton(onClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                try {
+                                    context.startActivity(
+                                        Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
+                                    )
+                                } catch (e: ActivityNotFoundException) {
+                                    context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+                                }
+                            }
+                        }) { Text("Allow") }
+                    }),
+                    colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                )
+                ListItem(
                     headlineContent = { Text(tr("Battery optimization se Yaad ko hata do", "Remove Yaad from battery optimization")) },
                     supportingContent = { Text(tr("Taaki reminder time pe aaye", "So reminders arrive on time")) },
                     leadingContent = { Icon(Icons.Default.BatteryAlert, null) },
@@ -562,6 +594,10 @@ fun SettingsScreen(onBack: () -> Unit, onOpenHistory: () -> Unit, vm: SettingsVi
         )
     }
 }
+
+private fun canExactAlarms(context: android.content.Context): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+        context.getSystemService(android.app.AlarmManager::class.java).canScheduleExactAlarms()
 
 private fun minuteLabel(minuteOfDay: Int): String =
     LocalTime.of(minuteOfDay / 60, minuteOfDay % 60).format(timeFormat)

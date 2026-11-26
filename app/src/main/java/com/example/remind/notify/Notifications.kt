@@ -1,5 +1,7 @@
 package com.example.remind.notify
 
+import com.example.remind.ui.RichNotes
+
 import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
@@ -83,7 +85,7 @@ object Notifications {
 
     private fun noteDetail(note: Note): String = buildString {
         if (note.keywords.isNotEmpty()) append(note.keywords.joinToString(" · "))
-        val body = note.body.trim()
+        val body = RichNotes.plain(note.body).trim()
         if (body.isNotEmpty()) {
             if (isNotEmpty()) append("\n")
             append(body.take(300))
