@@ -44,7 +44,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.TopAppBar
+import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import com.example.remind.R
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -58,6 +64,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextAlign
@@ -137,15 +144,15 @@ fun HomeScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { vm.refresh() }
 
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val listState = rememberLazyListState()
     val fabExpanded by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 } }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            LargeTopAppBar(
-                title = { Text("Remind") },
+            TopAppBar(
+                title = { HomeTitle() },
                 actions = {
                     IconButton(onClick = { onOpenLibrary(null, false) }) {
                         Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = "Library")
@@ -238,6 +245,48 @@ fun HomeScreen(
                     NoteCard(item, state.today, vm.repo.store, onClick = { onOpenNote(item.note.id) }, modifier = Modifier.animateItem())
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AppMark(size: androidx.compose.ui.unit.Dp) {
+    Box(
+        Modifier
+            .size(size)
+            .clip(RoundedCornerShape(size * 0.3f)),
+    ) {
+        Image(painterResource(R.drawable.ic_launcher_background), contentDescription = null, modifier = Modifier.fillMaxSize())
+        Image(
+            painterResource(R.drawable.ic_launcher_foreground),
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(scaleX = 1.5f, scaleY = 1.5f),
+        )
+    }
+}
+
+private val headerDate = DateTimeFormatter.ofPattern("EEEE, d MMM")
+
+@Composable
+private fun HomeTitle() {
+    val now = remember { LocalDateTime.now() }
+    val greeting = when (now.hour) {
+        in 5..11 -> "Good morning"
+        in 12..16 -> "Good afternoon"
+        else -> "Good evening"
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        AppMark(38.dp)
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text("Yaad", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "$greeting · ${now.format(headerDate)}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -389,7 +438,7 @@ private fun EmptyHome(modifier: Modifier = Modifier) {
         Text("Jo padha, wo yaad rahega", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Photo, handwriting, voice ya video ke saath note banao. Remind sahi time pe revision yaad dilayega: 1, 2, 4, 7… din baad.",
+            "Photo, handwriting, voice ya video ke saath note banao. Yaad sahi time pe revision yaad dilayega: 1, 2, 4, 7… din baad.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

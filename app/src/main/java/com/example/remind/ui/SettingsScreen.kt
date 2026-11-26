@@ -305,7 +305,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                 }
                 ListItem(
                     headlineContent = { Text("Reminder late aa rahe hain?") },
-                    supportingContent = { Text("Kuch phones (Xiaomi, Oppo, Vivo…) background apps rok dete hain. Battery optimization se Remind ko hata do.") },
+                    supportingContent = { Text("Kuch phones (Xiaomi, Oppo, Vivo…) background apps rok dete hain. Battery optimization se Yaad ko hata do.") },
                     leadingContent = { Icon(Icons.Default.BatteryAlert, null) },
                     modifier = Modifier.padding(top = 4.dp),
                     trailingContent = {
@@ -363,7 +363,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                     leadingContent = { Icon(Icons.Default.Upload, null) },
                     modifier = Modifier.padding(top = 4.dp),
                     trailingContent = {
-                        TextButton(onClick = { exportLauncher.launch("remind-backup-${LocalDate.now()}.zip") }) { Text("Export") }
+                        TextButton(onClick = { exportLauncher.launch("yaad-backup-${LocalDate.now()}.zip") }) { Text("Export") }
                     },
                     colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                 )
@@ -381,7 +381,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
             }
 
             Text(
-                "Remind v${BuildConfig.VERSION_NAME}",
+                "Yaad v${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier

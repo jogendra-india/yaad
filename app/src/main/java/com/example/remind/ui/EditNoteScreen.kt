@@ -117,7 +117,7 @@ class EditNoteViewModel(private val repo: Repository, state: SavedStateHandle) :
     }
 
     val intervalsValid get() = Scheduler.parseIntervals(intervalsText) != null
-    val canSave get() = title.isNotBlank() && intervalsValid
+    var titleError by mutableStateOf(false)
 
     val hasChanges
         get() = title.isNotBlank() || body.isNotBlank() || keywords.isNotEmpty() ||
@@ -141,9 +141,13 @@ class EditNoteViewModel(private val repo: Repository, state: SavedStateHandle) :
         }
     }
 
-    fun save(onDone: (Long) -> Unit) {
+    /** Returns false (and flags the field) when something required is missing. */
+    fun save(onDone: (Long) -> Unit): Boolean {
         commitKeywordInput()
-        val intervals = Scheduler.parseIntervals(intervalsText) ?: return
+        titleError = title.isBlank()
+        val intervals = Scheduler.parseIntervals(intervalsText)
+        if (titleError || intervals == null || saving) return false
+        saving = true
         viewModelScope.launch {
             val id = repo.saveNote(
                 existing = existing,
@@ -158,7 +162,10 @@ class EditNoteViewModel(private val repo: Repository, state: SavedStateHandle) :
             saved = true
             onDone(id)
         }
+        return true
     }
+
+    private var saving = false
 
     override fun onCleared() {
         // Discarded draft: drop files captured in this session.
@@ -186,6 +193,7 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
     var showVoice by rememberSaveable { mutableStateOf(false) }
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
     var viewing by rememberSaveable { mutableStateOf<String?>(null) }
+    val scroll = rememberScrollState()
 
     val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
         val name = pendingCapture ?: return@rememberLauncherForActivityResult
@@ -250,7 +258,7 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
                     IconButton(onClick = ::tryBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                 },
                 actions = {
-                    TextButton(onClick = { vm.save(onSaved) }, enabled = vm.canSave && vm.loaded) { Text("Save") }
+                    TextButton(onClick = { vm.save(onSaved) }, enabled = vm.loaded) { Text("Save") }
                 },
             )
         },
@@ -261,15 +269,17 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
                 .fillMaxSize()
                 .padding(padding)
                 .imePadding()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             OutlinedTextField(
                 value = vm.title,
-                onValueChange = { vm.title = it },
+                onValueChange = { vm.title = it; if (it.isNotBlank()) vm.titleError = false },
                 label = { Text("Title *") },
                 placeholder = { Text("Kya padha?") },
+                isError = vm.titleError,
+                supportingText = if (vm.titleError) ({ Text("Title zaroori hai") }) else null,
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth(),
@@ -364,6 +374,16 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
                 keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            androidx.compose.material3.Button(
+                onClick = {
+                    if (!vm.save(onSaved)) scope.launch { scroll.animateScrollTo(0) }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+            ) { Text(if (vm.isNew) "Save note" else "Save changes") }
+            Spacer(Modifier.height(8.dp))
         }
     }
 

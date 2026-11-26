@@ -193,14 +193,14 @@ fun HandwritingDialog(store: AttachmentStore, onDismiss: () -> Unit, onSaved: (S
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 inkColors.forEach { c ->
                     Box(
                         Modifier
-                            .size(32.dp)
+                            .size(34.dp)
                             .background(c, CircleShape)
                             .border(
                                 width = if (c == color && !eraser) 3.dp else 0.dp,
@@ -210,8 +210,15 @@ fun HandwritingDialog(store: AttachmentStore, onDismiss: () -> Unit, onSaved: (S
                             .clickable { color = c; eraser = false },
                     )
                 }
-                Spacer(Modifier.weight(1f))
-                FilterChip(selected = thick && !eraser, onClick = { thick = !thick; eraser = false }, label = { Text("Bold") })
+            }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+            ) {
+                FilterChip(selected = !thick && !eraser, onClick = { thick = false; eraser = false }, label = { Text("Pen") })
+                FilterChip(selected = thick && !eraser, onClick = { thick = true; eraser = false }, label = { Text("Bold") })
                 FilterChip(selected = eraser, onClick = { eraser = !eraser }, label = { Text("Eraser") })
             }
         }

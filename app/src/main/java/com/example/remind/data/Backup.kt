@@ -75,7 +75,7 @@ class Backup(private val context: Context, private val repo: Repository) {
                 zip.closeEntry()
             }
         }
-        val data = json ?: error("Not a Remind backup (backup.json missing)")
+        val data = json ?: error("Not a Yaad backup (backup.json missing)")
 
         val notes = data.getJSONArray("notes").objects().map(::noteFromJson)
         val attachments = data.getJSONArray("attachments").objects().map(::attachmentFromJson)
