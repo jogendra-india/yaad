@@ -1,5 +1,11 @@
 package com.example.remind.ui
 
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.runtime.mutableIntStateOf
+
 import com.example.remind.Lang
 import com.example.remind.tr
 
@@ -108,6 +114,14 @@ class SettingsViewModel(val repo: Repository, private val backup: Backup) : View
 
     fun setRemindersEnabled(enabled: Boolean) = viewModelScope.launch { repo.setRemindersEnabled(enabled) }
 
+    val randomEnabled = repo.randomEnabled
+    val randomStart = repo.randomStart
+    val randomEnd = repo.randomEnd
+    val randomCount = repo.randomCount
+
+    fun setRandom(enabled: Boolean? = null, start: Int? = null, end: Int? = null, count: Int? = null) =
+        viewModelScope.launch { repo.setRandom(enabled, start, end, count) }
+
     var intervalsText by mutableStateOf(Scheduler.formatIntervals(repo.defaultIntervals))
     val intervalsValid get() = Scheduler.parseIntervals(intervalsText) != null
     val intervalsChanged get() = Scheduler.parseIntervals(intervalsText) != repo.defaultIntervals
@@ -124,7 +138,7 @@ class SettingsViewModel(val repo: Repository, private val backup: Backup) : View
     fun remove(d: Digest) = viewModelScope.launch { repo.removeDigest(d) }
 
     suspend fun testNotification(context: android.content.Context) {
-        Notifications.showDigest(context, repo.dueTitles(), force = true)
+        Notifications.showDue(context, repo, force = true)
     }
 
     suspend fun export(uri: Uri): Result<Int> = withContext(Dispatchers.IO) { runCatching { backup.export(uri) } }
@@ -144,7 +158,7 @@ private val timeFormat = DateTimeFormatter.ofPattern("h:mm a")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)) {
+fun SettingsScreen(onBack: () -> Unit, onOpenHistory: () -> Unit, vm: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -153,6 +167,12 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
     val themeMode by vm.themeMode.collectAsStateWithLifecycle()
     val dynamicColor by vm.dynamicColor.collectAsStateWithLifecycle()
     val remindersOn by vm.remindersEnabled.collectAsStateWithLifecycle()
+    val randomOn by vm.randomEnabled.collectAsStateWithLifecycle()
+    val randomStart by vm.randomStart.collectAsStateWithLifecycle()
+    val randomEnd by vm.randomEnd.collectAsStateWithLifecycle()
+    val randomCount by vm.randomCount.collectAsStateWithLifecycle()
+    /** 0 = closed, 1 = picking the window start, 2 = picking the window end. */
+    var pickWindow by rememberSaveable { mutableIntStateOf(0) }
 
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
     var pendingImport by remember { mutableStateOf<Uri?>(null) }
@@ -274,12 +294,49 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
                 }
                 Text(
-                    tr("Har time pe ek notification aayega jisme likha hoga kitne notes due hain.", "At each time you'll get a notification saying how many notes are due."),
+                    tr(
+                        "Har due note ka alag notification aayega (ek baar me max 10). Wahin se Yaad tha / Thoda / Bhool gaya daba sakte ho.",
+                        "Each due note gets its own notification (up to 10 at a time). You can tap Remembered / Partly / Forgot right there.",
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
                 )
-                if (digests.isEmpty()) {
+                ListItem(
+                    headlineContent = { Text(tr("Random time pe", "Random times")) },
+                    supportingContent = {
+                        Text(tr("Fixed time ki jagah, roz window me random time pe", "Instead of fixed times, at random times in a daily window"))
+                    },
+                    leadingContent = { Icon(Icons.Default.Shuffle, null) },
+                    trailingContent = { Switch(checked = randomOn, onCheckedChange = { vm.setRandom(enabled = it) }) },
+                    colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                )
+                if (randomOn) {
+                    Row(
+                        Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(tr("Kab se kab tak", "Window"), Modifier.weight(1f))
+                        OutlinedButton(onClick = { pickWindow = 1 }) { Text(minuteLabel(randomStart)) }
+                        Text("–")
+                        OutlinedButton(onClick = { pickWindow = 2 }) { Text(minuteLabel(randomEnd)) }
+                    }
+                    Row(
+                        Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(tr("Din me kitni baar", "Times per day"), Modifier.weight(1f))
+                        IconButton(onClick = { vm.setRandom(count = randomCount - 1) }, enabled = randomCount > 1) {
+                            Icon(Icons.Default.Remove, contentDescription = "Less")
+                        }
+                        Text("$randomCount", style = MaterialTheme.typography.titleLarge)
+                        IconButton(onClick = { vm.setRandom(count = randomCount + 1) }, enabled = randomCount < 10) {
+                            Icon(Icons.Default.Add, contentDescription = "More")
+                        }
+                    }
+                }
+                if (!randomOn && digests.isEmpty()) {
                     Text(
                         tr("Koi time set nahi hai. Reminders nahi aayenge.", "No time set. You won't get reminders."),
                         style = MaterialTheme.typography.bodyMedium,
@@ -287,7 +344,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                         modifier = Modifier.padding(16.dp),
                     )
                 }
-                digests.forEach { digest ->
+                if (!randomOn) digests.forEach { digest ->
                     ListItem(
                         headlineContent = {
                             Text(
@@ -310,10 +367,12 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                     Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    OutlinedButton(onClick = { showTimePicker = true }) {
-                        Icon(Icons.Default.Add, null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(tr("Time add karo", "Add time"))
+                    if (!randomOn) {
+                        OutlinedButton(onClick = { showTimePicker = true }) {
+                            Icon(Icons.Default.Add, null)
+                            Spacer(Modifier.width(6.dp))
+                            Text(tr("Time add karo", "Add time"))
+                        }
                     }
                     TextButton(onClick = { scope.launch { vm.testNotification(context) } }, enabled = canNotify) {
                         Icon(Icons.Default.NotificationsActive, null)
@@ -324,8 +383,8 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                 }
                 }
                 ListItem(
-                    headlineContent = { Text(tr("Reminder late aa rahe hain?", "Reminders arriving late?")) },
-                    supportingContent = { Text(tr("Kuch phones (Xiaomi, Oppo, Vivo…) background apps rok dete hain. Battery optimization se Yaad ko hata do.", "Some phones (Xiaomi, Oppo, Vivo…) stop background apps. Exclude Yaad from battery optimization.")) },
+                    headlineContent = { Text(tr("Battery optimization se Yaad ko hata do", "Remove Yaad from battery optimization")) },
+                    supportingContent = { Text(tr("Taaki reminder time pe aaye", "So reminders arrive on time")) },
                     leadingContent = { Icon(Icons.Default.BatteryAlert, null) },
                     modifier = Modifier.padding(top = 4.dp),
                     trailingContent = {
@@ -337,6 +396,16 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                             }
                         }) { Text(tr("Kholo", "Open")) }
                     },
+                    colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                )
+            }
+
+            SettingsSection(tr("Notification history", "Notification history")) {
+                ListItem(
+                    headlineContent = { Text(tr("Purane notifications", "Past notifications")) },
+                    supportingContent = { Text(tr("Pichhle 30 din ke reminders aur unpe kya dabaya", "Reminders from the last 30 days and what you tapped")) },
+                    leadingContent = { Icon(Icons.Default.History, null) },
+                    modifier = Modifier.clickable(onClick = onOpenHistory),
                     colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                 )
             }
@@ -432,6 +501,32 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
         )
     }
 
+    if (pickWindow != 0) {
+        val initial = if (pickWindow == 1) randomStart else randomEnd
+        val pickerState = rememberTimePickerState(initialHour = initial / 60, initialMinute = initial % 60, is24Hour = false)
+        AlertDialog(
+            onDismissRequest = { pickWindow = 0 },
+            title = { Text(if (pickWindow == 1) tr("Kab se", "From") else tr("Kab tak", "Until")) },
+            text = { TimePicker(state = pickerState) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val minute = pickerState.hour * 60 + pickerState.minute
+                    val start = if (pickWindow == 1) minute else randomStart
+                    val end = if (pickWindow == 2) minute else randomEnd
+                    if (end - start < 30) {
+                        scope.launch { snackbar.showSnackbar(tr("Window kam se kam 30 minute ki honi chahiye", "The window must be at least 30 minutes")) }
+                    } else if (pickWindow == 1) {
+                        vm.setRandom(start = minute)
+                    } else {
+                        vm.setRandom(end = minute)
+                    }
+                    pickWindow = 0
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { pickWindow = 0 }) { Text("Cancel") } },
+        )
+    }
+
     pendingImport?.let { uri ->
         AlertDialog(
             onDismissRequest = { pendingImport = null },
@@ -454,6 +549,9 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
         )
     }
 }
+
+private fun minuteLabel(minuteOfDay: Int): String =
+    LocalTime.of(minuteOfDay / 60, minuteOfDay % 60).format(timeFormat)
 
 @Composable
 private fun SettingsSection(title: String, content: @Composable () -> Unit) {

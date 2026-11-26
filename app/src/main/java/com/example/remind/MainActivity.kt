@@ -1,5 +1,8 @@
 package com.example.remind
 
+import androidx.core.app.NotificationManagerCompat
+import com.example.remind.ui.NotificationHistoryScreen
+
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -83,6 +86,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Opening the app clears every Yaad notification from the bar.
+        NotificationManagerCompat.from(this).cancelAll()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.action == ACTION_START_REVIEW) reviewRequest++
@@ -112,6 +121,7 @@ private object Routes {
     const val NOTE = "note/{noteId}"
     const val REVIEW = "review?noteId={noteId}&deck={deck}&starred={starred}"
     const val SETTINGS = "settings"
+    const val HISTORY = "notifications"
 
     fun library(deck: String?, starred: Boolean) =
         "library?starred=$starred" + (deck?.let { "&deck=" + Uri.encode(it) } ?: "")
@@ -206,7 +216,10 @@ private fun RemindNavHost(reviewRequest: Int) {
             ReviewScreen(onClose = { nav.popBackStack() })
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = { nav.popBackStack() })
+            SettingsScreen(onBack = { nav.popBackStack() }, onOpenHistory = { nav.navigate(Routes.HISTORY) })
+        }
+        composable(Routes.HISTORY) {
+            NotificationHistoryScreen(onBack = { nav.popBackStack() }, onOpenNote = { nav.navigate(Routes.note(it)) })
         }
     }
 }

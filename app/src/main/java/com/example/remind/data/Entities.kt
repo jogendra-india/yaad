@@ -71,6 +71,18 @@ data class Digest(
     val enabled: Boolean = true,
 )
 
+/** One reminder notification that was shown, and what was tapped on it. */
+@Entity(tableName = "notification_log")
+data class NotificationLog(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val noteId: Long?,
+    val title: String,
+    val detail: String,
+    val postedAt: Long,
+    /** ReviewResult name when a rating was tapped on the notification. */
+    val response: String? = null,
+)
+
 /** Notes grouped by subject ("deck"). */
 data class DeckSummary(
     val subject: String,

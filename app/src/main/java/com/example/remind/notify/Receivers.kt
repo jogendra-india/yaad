@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.example.remind.RemindApp
+import com.example.remind.data.ReviewResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -14,18 +15,34 @@ class DigestReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                if (!repo.remindersEnabled.value) return@launch
                 when (intent.action) {
+                    // A rating tapped on a notification works even with reminders switched off.
+                    DigestScheduler.ACTION_RATE -> {
+                        val noteId = intent.getLongExtra(DigestScheduler.EXTRA_NOTE_ID, -1)
+                        val result = intent.getStringExtra(DigestScheduler.EXTRA_RESULT)
+                            ?.let { name -> ReviewResult.entries.firstOrNull { it.name == name } }
+                        if (noteId >= 0 && result != null) repo.reviewFromNotification(noteId, result)
+                        Notifications.cancelNote(context, noteId)
+                    }
                     DigestScheduler.ACTION_DIGEST -> {
-                        Notifications.showDigest(context, repo.dueTitles())
+                        if (!repo.remindersEnabled.value) return@launch
+                        Notifications.showDue(context, repo)
                         val id = intent.getLongExtra(DigestScheduler.EXTRA_DIGEST_ID, -1)
                         repo.digest(id)?.let { repo.applyDigest(it) }
                     }
+                    DigestScheduler.ACTION_RANDOM -> {
+                        if (!repo.remindersEnabled.value) return@launch
+                        Notifications.showDue(context, repo)
+                        repo.rescheduleDigests()
+                    }
                     DigestScheduler.ACTION_SNOOZE -> {
-                        Notifications.cancelDigest(context)
+                        Notifications.cancelAll(context)
                         DigestScheduler.scheduleSnooze(context)
                     }
-                    DigestScheduler.ACTION_SNOOZE_FIRE -> Notifications.showDigest(context, repo.dueTitles())
+                    DigestScheduler.ACTION_SNOOZE_FIRE -> {
+                        if (!repo.remindersEnabled.value) return@launch
+                        Notifications.showDue(context, repo)
+                    }
                 }
             } finally {
                 pending.finish()

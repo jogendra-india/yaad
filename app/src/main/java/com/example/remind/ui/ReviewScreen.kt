@@ -178,7 +178,7 @@ class ReviewViewModel(private val repo: Repository, state: SavedStateHandle) : V
 @Composable
 fun ReviewScreen(onClose: () -> Unit, vm: ReviewViewModel = viewModel(factory = ReviewViewModel.Factory)) {
     val context = LocalContext.current
-    LaunchedEffect(Unit) { if (!vm.practice) Notifications.cancelDigest(context) }
+    LaunchedEffect(Unit) { if (!vm.practice) Notifications.cancelAll(context) }
 
     val total = vm.ids?.size ?: 0
     val progress by animateFloatAsState(

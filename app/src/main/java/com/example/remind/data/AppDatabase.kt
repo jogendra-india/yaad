@@ -1,5 +1,8 @@
 package com.example.remind.data
 
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+
 import android.content.Context
 import androidx.room.Dao
 import androidx.room.Database
@@ -40,6 +43,9 @@ interface NoteDao {
 
     @Query("SELECT title FROM notes WHERE mastered = 0 AND nextDueDay <= :today ORDER BY nextDueDay, createdAt")
     suspend fun dueTitles(today: Long): List<String>
+
+    @Query("SELECT * FROM notes WHERE mastered = 0 AND nextDueDay <= :today ORDER BY nextDueDay, createdAt")
+    suspend fun dueNotes(today: Long): List<Note>
 
     @Query("SELECT DISTINCT subject FROM notes WHERE subject != '' ORDER BY subject COLLATE NOCASE")
     fun observeSubjects(): Flow<List<String>>
@@ -131,9 +137,38 @@ interface DigestDao {
     suspend fun deleteAll()
 }
 
+@Dao
+interface NotificationLogDao {
+    @Insert
+    suspend fun insert(log: NotificationLog): Long
+
+    @Query("SELECT * FROM notification_log ORDER BY postedAt DESC LIMIT 500")
+    fun observeAll(): Flow<List<NotificationLog>>
+
+    @Query("UPDATE notification_log SET response = :response WHERE id = (SELECT MAX(id) FROM notification_log WHERE noteId = :noteId)")
+    suspend fun setResponse(noteId: Long, response: String)
+
+    @Query("DELETE FROM notification_log WHERE postedAt < :before")
+    suspend fun deleteOlderThan(before: Long)
+
+    @Query("DELETE FROM notification_log")
+    suspend fun deleteAll()
+}
+
+/** v2 adds the notification history table. */
+private val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `notification_log` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `noteId` INTEGER, `title` TEXT NOT NULL, " +
+                "`detail` TEXT NOT NULL, `postedAt` INTEGER NOT NULL, `response` TEXT)"
+        )
+    }
+}
+
 @Database(
-    entities = [Note::class, Attachment::class, ReviewLog::class, Digest::class],
-    version = 1,
+    entities = [Note::class, Attachment::class, ReviewLog::class, Digest::class, NotificationLog::class],
+    version = 2,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -142,9 +177,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun attachments(): AttachmentDao
     abstract fun reviewLogs(): ReviewLogDao
     abstract fun digests(): DigestDao
+    abstract fun notificationLogs(): NotificationLogDao
 
     companion object {
         fun create(context: Context): AppDatabase =
-            Room.databaseBuilder(context, AppDatabase::class.java, "remind.db").build()
+            Room.databaseBuilder(context, AppDatabase::class.java, "remind.db")
+                .addMigrations(MIGRATION_1_2)
+                .build()
     }
 }

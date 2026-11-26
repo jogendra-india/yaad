@@ -77,6 +77,30 @@ class Repository(
     suspend fun get(id: Long) = db.notes().get(id)
     suspend fun dueIds() = db.notes().dueIds(today())
     suspend fun dueTitles() = db.notes().dueTitles(today())
+    suspend fun dueNotes() = db.notes().dueNotes(today())
+
+    // Notification history
+
+    fun observeNotificationLog() = db.notificationLogs().observeAll()
+
+    suspend fun logNotification(note: Note, detail: String) {
+        db.notificationLogs().insert(
+            NotificationLog(noteId = note.id, title = note.title, detail = detail, postedAt = System.currentTimeMillis())
+        )
+    }
+
+    suspend fun pruneNotificationLog() {
+        db.notificationLogs().deleteOlderThan(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000)
+    }
+
+    suspend fun clearNotificationLog() = db.notificationLogs().deleteAll()
+
+    /** A rating tapped on a notification. Ignored if the note was already revised in the app. */
+    suspend fun reviewFromNotification(noteId: Long, result: ReviewResult) {
+        val note = db.notes().get(noteId)?.note ?: return
+        if (!note.mastered && note.nextDueDay <= today()) review(noteId, result)
+        db.notificationLogs().setResponse(noteId, result.name)
+    }
 
     suspend fun saveNote(
         existing: Note?,
@@ -180,11 +204,50 @@ class Repository(
 
     suspend fun rescheduleDigests() {
         db.digests().all().forEach { applyDigest(it) }
+        if (_remindersEnabled.value && _randomEnabled.value) {
+            DigestScheduler.scheduleRandom(context, randomPlan())
+        } else {
+            DigestScheduler.cancelRandom(context)
+        }
     }
 
-    /** Schedules the digest, or cancels it when it or the master switch is off. */
+    /** Schedules the digest, or cancels it when it, the master switch or fixed-time mode is off. */
     fun applyDigest(digest: Digest) {
-        if (_remindersEnabled.value) DigestScheduler.schedule(context, digest) else DigestScheduler.cancel(context, digest)
+        if (_remindersEnabled.value && !_randomEnabled.value) {
+            DigestScheduler.schedule(context, digest)
+        } else {
+            DigestScheduler.cancel(context, digest)
+        }
+    }
+
+    // Random reminder times (opt-in): `count` reminders a day at random minutes between start and end.
+
+    private val _randomEnabled = MutableStateFlow(prefs.getBoolean(KEY_RANDOM, false))
+    val randomEnabled: StateFlow<Boolean> = _randomEnabled
+    private val _randomStart = MutableStateFlow(prefs.getInt(KEY_RANDOM_START, 8 * 60))
+    val randomStart: StateFlow<Int> = _randomStart
+    private val _randomEnd = MutableStateFlow(prefs.getInt(KEY_RANDOM_END, 23 * 60))
+    val randomEnd: StateFlow<Int> = _randomEnd
+    private val _randomCount = MutableStateFlow(prefs.getInt(KEY_RANDOM_COUNT, 3))
+    val randomCount: StateFlow<Int> = _randomCount
+
+    fun randomPlan(): DigestScheduler.RandomPlan {
+        var seed = prefs.getLong(KEY_RANDOM_SEED, 0L)
+        if (seed == 0L) {
+            seed = kotlin.random.Random.nextLong()
+            prefs.edit().putLong(KEY_RANDOM_SEED, seed).apply()
+        }
+        return DigestScheduler.RandomPlan(_randomStart.value, _randomEnd.value, _randomCount.value, seed)
+    }
+
+    suspend fun setRandom(enabled: Boolean? = null, start: Int? = null, end: Int? = null, count: Int? = null) {
+        val editor = prefs.edit()
+        enabled?.let { editor.putBoolean(KEY_RANDOM, it); _randomEnabled.value = it }
+        start?.let { editor.putInt(KEY_RANDOM_START, it); _randomStart.value = it }
+        end?.let { editor.putInt(KEY_RANDOM_END, it); _randomEnd.value = it }
+        count?.let { editor.putInt(KEY_RANDOM_COUNT, it); _randomCount.value = it }
+        editor.apply()
+        rescheduleDigests()
     }
 
     /** First launch: one evening digest at 8 PM. */
@@ -202,5 +265,10 @@ class Repository(
         const val KEY_THEME = "theme_mode"
         const val KEY_DYNAMIC = "dynamic_color"
         const val KEY_REMINDERS = "reminders_enabled"
+        const val KEY_RANDOM = "random_enabled"
+        const val KEY_RANDOM_START = "random_start_minute"
+        const val KEY_RANDOM_END = "random_end_minute"
+        const val KEY_RANDOM_COUNT = "random_count"
+        const val KEY_RANDOM_SEED = "random_seed"
     }
 }
