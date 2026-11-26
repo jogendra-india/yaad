@@ -13,14 +13,28 @@ android {
         applicationId = "com.yaad.revision"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
+        // CI passes the GitHub run number so every build installs over the last one.
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 3
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        // Only present on CI when the KEYSTORE_* repo secrets are set.
+        System.getenv("YAAD_KEYSTORE")?.let { path ->
+            create("release") {
+                storeFile = file(path)
+                storePassword = System.getenv("YAAD_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("YAAD_KEY_ALIAS")
+                keyPassword = System.getenv("YAAD_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfigs.findByName("release")?.let { signingConfig = it }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
