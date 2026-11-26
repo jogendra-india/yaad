@@ -226,7 +226,7 @@ fun NoteDetailScreen(
             KeywordChips(note.keywords)
 
             if (note.body.isNotBlank()) {
-                Text(RichNotes.display(note.body), style = MaterialTheme.typography.bodyLarge)
+                NotesText(note.body, style = MaterialTheme.typography.bodyLarge)
             }
 
             if (current.attachments.isNotEmpty()) {

@@ -14,8 +14,8 @@ android {
         minSdk = 26
         targetSdk = 35
         // CI passes the GitHub run number so every build installs over the last one.
-        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 7
-        versionName = "1.6"
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 8
+        versionName = "1.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -75,6 +75,7 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.exifinterface)
     implementation(libs.coil.compose)
+    implementation(libs.richtext.editor)
     implementation(libs.coil.video)
     debugImplementation(libs.androidx.compose.ui.tooling)
 

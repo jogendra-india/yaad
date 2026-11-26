@@ -1,5 +1,8 @@
 package com.example.remind.ui
 
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.RoundedCornerShape
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.interaction.MutableInteractionSource
 
@@ -165,7 +168,11 @@ fun HandwritingDialog(store: AttachmentStore, onDismiss: () -> Unit, onSaved: (S
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(8.dp)
+                    .padding(8.dp),
+            ) {
+            Box(
+                Modifier
+                    .fillMaxSize()
                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
                     .background(Color.White)
                     .onSizeChanged { canvasSize = it }
@@ -198,36 +205,39 @@ fun HandwritingDialog(store: AttachmentStore, onDismiss: () -> Unit, onSaved: (S
                 }
             }
 
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically,
+            // Tools float in the page's top-right corner. As the later sibling this
+            // panel is hit-tested first, so taps on it never draw on the page.
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
+                shadowElevation = 3.dp,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp),
             ) {
-                inkColors.forEach { c ->
-                    Box(
-                        Modifier
-                            .size(34.dp)
-                            .background(c, CircleShape)
-                            .border(
-                                width = if (c == color && !eraser) 3.dp else 0.dp,
-                                color = MaterialTheme.colorScheme.primary,
-                                shape = CircleShape,
+                Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.End) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        inkColors.forEach { c ->
+                            Box(
+                                Modifier
+                                    .size(28.dp)
+                                    .background(c, CircleShape)
+                                    .border(
+                                        width = if (c == color && !eraser) 3.dp else 0.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = CircleShape,
+                                    )
+                                    .clickable { color = c; eraser = false },
                             )
-                            .clickable { color = c; eraser = false },
-                    )
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(selected = !thick && !eraser, onClick = { thick = false; eraser = false }, label = { Text("Pen") })
+                        FilterChip(selected = thick && !eraser, onClick = { thick = true; eraser = false }, label = { Text("Bold") })
+                        FilterChip(selected = eraser, onClick = { eraser = !eraser }, label = { Text("Eraser") })
+                    }
                 }
             }
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
-            ) {
-                FilterChip(selected = !thick && !eraser, onClick = { thick = false; eraser = false }, label = { Text("Pen") })
-                FilterChip(selected = thick && !eraser, onClick = { thick = true; eraser = false }, label = { Text("Bold") })
-                FilterChip(selected = eraser, onClick = { eraser = !eraser }, label = { Text("Eraser") })
             }
         }
     }

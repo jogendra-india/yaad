@@ -1,5 +1,14 @@
 package com.example.remind.ui
 
+import com.mohamedrejeb.richeditor.model.rememberRichTextState
+import com.mohamedrejeb.richeditor.ui.material3.OutlinedRichTextEditor
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.IconButtonDefaults
+
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.platform.LocalDensity
@@ -170,8 +179,7 @@ class EditNoteViewModel(private val repo: Repository, state: SavedStateHandle) :
      * from the notes, the keywords, or the attachment type and date.
      */
     private fun autoTitle(): String {
-        RichNotes.plain(body).lineSequence()
-            .map { line -> line.removePrefix(RichNotes.listPrefix(line) ?: "").trim() }
+        RichNotes.plain(body).lineSequence().map { it.trim() }
             .firstOrNull { it.isNotEmpty() }?.let { return it.take(60) }
         if (keywords.isNotEmpty()) return keywords.take(3).joinToString(", ")
         val kind = when (attachments.firstOrNull()?.type) {
@@ -468,36 +476,46 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
  */
 @Composable
 private fun NotesEditor(vm: EditNoteViewModel) {
-    var notes by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(vm.body)) }
+    val state = rememberRichTextState()
+    var ready by remember { mutableStateOf(false) }
     var boxHeight by rememberSaveable { mutableFloatStateOf(140f) }
     val density = LocalDensity.current.density
-    val markerColor = MaterialTheme.colorScheme.outline
-    val transformation = remember(markerColor) { RichNotesTransformation(markerColor) }
 
-    fun update(value: TextFieldValue) {
-        notes = value
-        vm.body = value.text
+    LaunchedEffect(Unit) {
+        if (vm.body.isNotBlank()) state.setHtml(RichNotes.toHtml(vm.body))
+        ready = true
     }
+    LaunchedEffect(state.annotatedString, ready) {
+        if (ready) vm.body = if (state.annotatedString.text.isBlank()) "" else state.toHtml()
+    }
+
+    val span = state.currentSpanStyle
+    val bold = span.fontWeight == FontWeight.Bold
+    val italic = span.fontStyle == FontStyle.Italic
+    val underline = span.textDecoration?.contains(TextDecoration.Underline) == true
 
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Notes", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-            IconButton(onClick = { update(RichNotes.wrap(notes, "**")) }) { Icon(Icons.Default.FormatBold, contentDescription = "Bold") }
-            IconButton(onClick = { update(RichNotes.wrap(notes, "*")) }) { Icon(Icons.Default.FormatItalic, contentDescription = "Italic") }
-            IconButton(onClick = { update(RichNotes.wrap(notes, "++")) }) { Icon(Icons.Default.FormatUnderlined, contentDescription = "Underline") }
-            IconButton(onClick = { update(RichNotes.toggleList(notes, numberedList = false)) }) {
-                Icon(Icons.AutoMirrored.Filled.FormatListBulleted, contentDescription = "Bullets")
+            FormatButton(Icons.Default.FormatBold, "Bold", bold) {
+                state.toggleSpanStyle(SpanStyle(fontWeight = FontWeight.Bold))
             }
-            IconButton(onClick = { update(RichNotes.toggleList(notes, numberedList = true)) }) {
-                Icon(Icons.Default.FormatListNumbered, contentDescription = "Numbering")
+            FormatButton(Icons.Default.FormatItalic, "Italic", italic) {
+                state.toggleSpanStyle(SpanStyle(fontStyle = FontStyle.Italic))
+            }
+            FormatButton(Icons.Default.FormatUnderlined, "Underline", underline) {
+                state.toggleSpanStyle(SpanStyle(textDecoration = TextDecoration.Underline))
+            }
+            FormatButton(Icons.AutoMirrored.Filled.FormatListBulleted, "Bullets", state.isUnorderedList) {
+                state.toggleUnorderedList()
+            }
+            FormatButton(Icons.Default.FormatListNumbered, "Numbering", state.isOrderedList) {
+                state.toggleOrderedList()
             }
         }
-        OutlinedTextField(
-            value = notes,
-            onValueChange = { update(RichNotes.onEdit(notes, it)) },
+        OutlinedRichTextEditor(
+            state = state,
             placeholder = { Text("Short summary, formula, points…") },
-            visualTransformation = transformation,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = boxHeight.dp),
@@ -519,6 +537,22 @@ private fun NotesEditor(vm: EditNoteViewModel) {
             )
         }
     }
+}
+
+/** A formatting button that shows whether its style is active at the cursor. */
+@Composable
+private fun FormatButton(icon: ImageVector, label: String, active: Boolean, onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+        colors = if (active) {
+            IconButtonDefaults.iconButtonColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        } else {
+            IconButtonDefaults.iconButtonColors()
+        },
+    ) { Icon(icon, contentDescription = label) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
