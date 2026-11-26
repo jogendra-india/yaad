@@ -1,5 +1,7 @@
 package com.example.remind.ui
 
+import com.example.remind.tr
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -230,7 +232,7 @@ fun ReviewScreen(onClose: () -> Unit, vm: ReviewViewModel = viewModel(factory = 
                             ) {
                                 Icon(Icons.Default.Visibility, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Jawab dekho")
+                                Text(tr("Jawab dekho", "Show answer"))
                             }
                         } else {
                             RatingButtons(vm)
@@ -309,7 +311,7 @@ private fun ReviewCard(item: NoteWithAttachments, vm: ReviewViewModel) {
                     exit = fadeOut() + shrinkVertically(),
                 ) {
                     Text(
-                        "Pehle khud yaad karo: keywords kya the, main points kya the? Phir jawab dekho.",
+                        tr("Pehle khud yaad karo: keywords kya the, main points kya the? Phir jawab dekho.", "Recall it first: what were the keywords and main points? Then check the answer."),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -328,7 +330,7 @@ private fun ReviewCard(item: NoteWithAttachments, vm: ReviewViewModel) {
                         }
                         if (note.keywords.isEmpty() && note.body.isBlank() && item.attachments.isEmpty()) {
                             Text(
-                                "Is note me sirf title hai. Edit karke keywords ya photo add karo.",
+                                tr("Is note me sirf title hai. Edit karke keywords ya photo add karo.", "This note only has a title. Edit it to add keywords or a photo."),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -344,9 +346,9 @@ private fun ReviewCard(item: NoteWithAttachments, vm: ReviewViewModel) {
 private fun RatingButtons(vm: ReviewViewModel) {
     val scheme = MaterialTheme.colorScheme
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        RatingButton("Bhool gaya", ReviewResult.FORGOT, vm, scheme.errorContainer, scheme.onErrorContainer, Modifier.weight(1f))
-        RatingButton("Thoda", ReviewResult.HARD, vm, scheme.secondaryContainer, scheme.onSecondaryContainer, Modifier.weight(1f))
-        RatingButton("Yaad tha", ReviewResult.GOOD, vm, scheme.primary, scheme.onPrimary, Modifier.weight(1f))
+        RatingButton(tr("Bhool gaya", "Forgot"), ReviewResult.FORGOT, vm, scheme.errorContainer, scheme.onErrorContainer, Modifier.weight(1f))
+        RatingButton(tr("Thoda", "Partly"), ReviewResult.HARD, vm, scheme.secondaryContainer, scheme.onSecondaryContainer, Modifier.weight(1f))
+        RatingButton(tr("Yaad tha", "Remembered"), ReviewResult.GOOD, vm, scheme.primary, scheme.onPrimary, Modifier.weight(1f))
     }
 }
 
@@ -361,7 +363,7 @@ private fun RatingButton(
 ) {
     val subtitle = when {
         vm.practice -> "practice"
-        else -> vm.preview(result)?.let { if (it == 1) "kal" else "$it din" } ?: "mastered"
+        else -> vm.preview(result)?.let { if (it == 1) tr("kal", "tomorrow") else tr("$it din", "$it days") } ?: "mastered"
     }
     FilledTonalButton(
         onClick = { vm.rate(result) },
@@ -404,11 +406,11 @@ private fun FinishedView(vm: ReviewViewModel, onClose: () -> Unit) {
             }
         }
         Spacer(Modifier.height(24.dp))
-        Text("Shabash!", style = MaterialTheme.typography.headlineMedium)
+        Text(tr("Shabash!", "Well done!"), style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(8.dp))
         Text(
-            if (vm.practice) "Practice complete. Schedule pe koi asar nahi pada."
-            else "Aaj ka revision ho gaya. Agla reminder time pe aa jayega.",
+            if (vm.practice) tr("Practice complete. Schedule pe koi asar nahi pada.", "Practice complete. Your schedule is unchanged.")
+            else tr("Aaj ka revision ho gaya. Agla reminder time pe aa jayega.", "Today's revision is done. The next reminder will come on time."),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -439,8 +441,8 @@ private fun NothingToReview(practice: Boolean, onClose: () -> Unit) {
     ) {
         Icon(Icons.Default.TaskAlt, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(64.dp))
         Spacer(Modifier.height(16.dp))
-        Text(if (practice) "Is deck me koi note nahi" else "Abhi kuch due nahi hai", style = MaterialTheme.typography.titleLarge)
+        Text(if (practice) tr("Is deck me koi note nahi", "No notes in this deck") else tr("Abhi kuch due nahi hai", "Nothing is due right now"), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(20.dp))
-        Button(onClick = onClose) { Text("Wapas jao") }
+        Button(onClick = onClose) { Text(tr("Wapas jao", "Go back")) }
     }
 }

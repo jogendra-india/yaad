@@ -2,6 +2,7 @@ package com.example.remind.data
 
 import android.content.Context
 import androidx.room.withTransaction
+import com.example.remind.Lang
 import com.example.remind.notify.DigestScheduler
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +43,11 @@ class Repository(
     fun setDynamicColor(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_DYNAMIC, enabled).apply()
         _dynamicColor.value = enabled
+    }
+
+    fun setEnglish(english: Boolean) {
+        prefs.edit().putBoolean(Lang.KEY_ENGLISH, english).apply()
+        Lang.english = english
     }
 
     private val _remindersEnabled = MutableStateFlow(prefs.getBoolean(KEY_REMINDERS, true))

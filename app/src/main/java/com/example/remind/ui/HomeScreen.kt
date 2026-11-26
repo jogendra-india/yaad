@@ -1,5 +1,7 @@
 package com.example.remind.ui
 
+import com.example.remind.tr
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -167,7 +169,7 @@ fun HomeScreen(
                 onClick = onAdd,
                 expanded = fabExpanded,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Naya note") },
+                text = { Text(tr("Naya note", "New note")) },
             )
         },
     ) { padding ->
@@ -198,7 +200,7 @@ fun HomeScreen(
 
             item(key = "decks-header") {
                 SectionHeader("Decks") {
-                    TextButton(onClick = { onOpenLibrary(null, false) }) { Text("Sab notes") }
+                    TextButton(onClick = { onOpenLibrary(null, false) }) { Text(tr("Sab notes", "All notes")) }
                 }
             }
             item(key = "decks") {
@@ -310,7 +312,7 @@ private fun HeroCard(dueCount: Int, streak: Int, nextUp: String?, onStart: () ->
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Aaj ka revision",
+                        tr("Aaj ka revision", "Today's revision"),
                         style = MaterialTheme.typography.labelLarge,
                         color = scheme.onPrimaryContainer,
                         modifier = Modifier.weight(1f),
@@ -319,7 +321,7 @@ private fun HeroCard(dueCount: Int, streak: Int, nextUp: String?, onStart: () ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.LocalFireDepartment, contentDescription = null, tint = StarColor, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(2.dp))
-                            Text("$streak din streak", style = MaterialTheme.typography.labelLarge, color = scheme.onPrimaryContainer)
+                            Text(tr("$streak din streak", "$streak day streak"), style = MaterialTheme.typography.labelLarge, color = scheme.onPrimaryContainer)
                         }
                     }
                 }
@@ -341,16 +343,16 @@ private fun HeroCard(dueCount: Int, streak: Int, nextUp: String?, onStart: () ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.TaskAlt, contentDescription = null, tint = scheme.onPrimaryContainer)
                             Spacer(Modifier.width(8.dp))
-                            Text("Sab revise ho gaya", style = MaterialTheme.typography.headlineSmall, color = scheme.onPrimaryContainer)
+                            Text(tr("Sab revise ho gaya", "All revised"), style = MaterialTheme.typography.headlineSmall, color = scheme.onPrimaryContainer)
                         }
                     }
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
                     when {
-                        dueCount > 0 -> "Thoda time nikaalo, yaad pakka ho jayega."
-                        nextUp != null -> "Agla revision: $nextUp"
-                        else -> "Naya note add karo, reminder hum denge."
+                        dueCount > 0 -> tr("Thoda time nikaalo, yaad pakka ho jayega.", "Take a few minutes, it'll stick for good.")
+                        nextUp != null -> tr("Agla revision: $nextUp", "Next revision: $nextUp")
+                        else -> tr("Naya note add karo, reminder hum denge.", "Add a note, we'll remind you.")
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = scheme.onPrimaryContainer.copy(alpha = 0.8f),
@@ -363,7 +365,7 @@ private fun HeroCard(dueCount: Int, streak: Int, nextUp: String?, onStart: () ->
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
-                        Text("Revision shuru karo")
+                        Text(tr("Revision shuru karo", "Start revision"))
                     }
                 }
             }
@@ -435,10 +437,10 @@ private fun EmptyHome(modifier: Modifier = Modifier) {
             Icon(Icons.Default.AutoStories, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(48.dp))
         }
         Spacer(Modifier.height(20.dp))
-        Text("Jo padha, wo yaad rahega", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+        Text(tr("Jo padha, wo yaad rahega", "Remember what you study"), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Photo, handwriting, voice ya video ke saath note banao. Yaad sahi time pe revision yaad dilayega: 1, 2, 4, 7… din baad.",
+            tr("Photo, handwriting, voice ya video ke saath note banao. Yaad sahi time pe revision yaad dilayega: 1, 2, 4, 7… din baad.", "Make notes with photos, handwriting, voice or video. Yaad reminds you to revise at the right time: after 1, 2, 4, 7… days."),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

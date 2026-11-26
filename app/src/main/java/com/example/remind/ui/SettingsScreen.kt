@@ -1,5 +1,8 @@
 package com.example.remind.ui
 
+import com.example.remind.Lang
+import com.example.remind.tr
+
 import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -33,6 +36,7 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -209,10 +213,26 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                         ) { Text(label) }
                     }
                 }
+                Text(tr("Bhasha", "Language"), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 16.dp))
+                SingleChoiceSegmentedButtonRow(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    val languages = listOf(false to "Hinglish", true to "English")
+                    languages.forEachIndexed { index, (english, label) ->
+                        SegmentedButton(
+                            selected = Lang.english == english,
+                            onClick = { vm.repo.setEnglish(english) },
+                            shape = SegmentedButtonDefaults.itemShape(index, languages.size),
+                            icon = { Icon(Icons.Default.Translate, contentDescription = null, Modifier.padding(0.dp)) },
+                        ) { Text(label) }
+                    }
+                }
                 if (supportsDynamicColor) {
                     ListItem(
                         headlineContent = { Text("Material You colours") },
-                        supportingContent = { Text("Wallpaper se colours lo") },
+                        supportingContent = { Text(tr("Wallpaper se colours lo", "Use colours from your wallpaper")) },
                         leadingContent = { Icon(Icons.Default.Palette, null) },
                         trailingContent = { Switch(checked = dynamicColor, onCheckedChange = vm.repo::setDynamicColor) },
                         colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
@@ -223,7 +243,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
             SettingsSection("Daily digest") {
                 ListItem(
                     headlineContent = { Text("Reminders") },
-                    supportingContent = { Text(if (remindersOn) "Notifications aayenge" else "Sab notifications band hain") },
+                    supportingContent = { Text(if (remindersOn) tr("Notifications aayenge", "Notifications are on") else tr("Sab notifications band hain", "All notifications are off")) },
                     leadingContent = {
                         Icon(
                             if (remindersOn) Icons.Default.NotificationsActive else Icons.Default.NotificationsOff,
@@ -239,8 +259,8 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                 Column {
                 if (!canNotify) {
                     ListItem(
-                        headlineContent = { Text("Notifications band hai") },
-                        supportingContent = { Text("Reminder ke liye permission do") },
+                        headlineContent = { Text(tr("Notifications band hai", "Notifications are blocked")) },
+                        supportingContent = { Text(tr("Reminder ke liye permission do", "Allow notifications to get reminders")) },
                         leadingContent = { Icon(Icons.Default.NotificationsOff, null, tint = MaterialTheme.colorScheme.error) },
                         trailingContent = {
                             TextButton(onClick = {
@@ -254,14 +274,14 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
                 }
                 Text(
-                    "Har time pe ek notification aayega jisme likha hoga kitne notes due hain.",
+                    tr("Har time pe ek notification aayega jisme likha hoga kitne notes due hain.", "At each time you'll get a notification saying how many notes are due."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
                 if (digests.isEmpty()) {
                     Text(
-                        "Koi time set nahi hai. Reminders nahi aayenge.",
+                        tr("Koi time set nahi hai. Reminders nahi aayenge.", "No time set. You won't get reminders."),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(16.dp),
@@ -276,7 +296,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                                 color = if (digest.enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         },
-                        supportingContent = { Text(if (digest.enabled) "Roz" else "Off") },
+                        supportingContent = { Text(if (digest.enabled) tr("Roz", "Daily") else "Off") },
                         trailingContent = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Switch(checked = digest.enabled, onCheckedChange = { vm.setEnabled(digest, it) })
@@ -293,7 +313,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                     OutlinedButton(onClick = { showTimePicker = true }) {
                         Icon(Icons.Default.Add, null)
                         Spacer(Modifier.width(6.dp))
-                        Text("Time add karo")
+                        Text(tr("Time add karo", "Add time"))
                     }
                     TextButton(onClick = { scope.launch { vm.testNotification(context) } }, enabled = canNotify) {
                         Icon(Icons.Default.NotificationsActive, null)
@@ -304,8 +324,8 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                 }
                 }
                 ListItem(
-                    headlineContent = { Text("Reminder late aa rahe hain?") },
-                    supportingContent = { Text("Kuch phones (Xiaomi, Oppo, Vivo…) background apps rok dete hain. Battery optimization se Yaad ko hata do.") },
+                    headlineContent = { Text(tr("Reminder late aa rahe hain?", "Reminders arriving late?")) },
+                    supportingContent = { Text(tr("Kuch phones (Xiaomi, Oppo, Vivo…) background apps rok dete hain. Battery optimization se Yaad ko hata do.", "Some phones (Xiaomi, Oppo, Vivo…) stop background apps. Exclude Yaad from battery optimization.")) },
                     leadingContent = { Icon(Icons.Default.BatteryAlert, null) },
                     modifier = Modifier.padding(top = 4.dp),
                     trailingContent = {
@@ -315,7 +335,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                             } catch (e: ActivityNotFoundException) {
                                 context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
                             }
-                        }) { Text("Kholo") }
+                        }) { Text(tr("Kholo", "Open")) }
                     },
                     colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                 )
@@ -326,10 +346,10 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                     OutlinedTextField(
                         value = vm.intervalsText,
                         onValueChange = { vm.intervalsText = it },
-                        label = { Text("Default gaps (din)") },
+                        label = { Text(tr("Default gaps (din)", "Default gaps (days)")) },
                         isError = !vm.intervalsValid,
                         supportingText = {
-                            Text(if (vm.intervalsValid) "Naye notes ke liye. Purane notes apna schedule rakhenge." else "Sirf positive numbers, comma se alag")
+                            Text(if (vm.intervalsValid) tr("Naye notes ke liye. Purane notes apna schedule rakhenge.", "For new notes. Existing notes keep their schedule.") else tr("Sirf positive numbers, comma se alag", "Positive numbers only, comma separated"))
                         },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -339,7 +359,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                         TextButton(
                             onClick = {
                                 vm.saveIntervals()
-                                scope.launch { snackbar.showSnackbar("Default schedule save ho gaya") }
+                                scope.launch { snackbar.showSnackbar(tr("Default schedule save ho gaya", "Default schedule saved")) }
                             },
                             enabled = vm.intervalsValid && vm.intervalsChanged,
                         ) { Text("Save") }
@@ -352,14 +372,14 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
 
             SettingsSection("Backup") {
                 Text(
-                    "Sab kuch phone me hi rehta hai. Phone badalne ya kho jaane se pehle backup file bana ke rakho (Drive/PC pe).",
+                    tr("Sab kuch phone me hi rehta hai. Phone badalne ya kho jaane se pehle backup file bana ke rakho (Drive/PC pe).", "Everything stays on this phone. Keep a backup file (on Drive/PC) before you switch or lose your phone."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
                 ListItem(
                     headlineContent = { Text("Backup export") },
-                    supportingContent = { Text("Notes + photos + voice + video, ek .zip me") },
+                    supportingContent = { Text(tr("Notes + photos + voice + video, ek .zip me", "Notes + photos + voice + video in one .zip")) },
                     leadingContent = { Icon(Icons.Default.Upload, null) },
                     modifier = Modifier.padding(top = 4.dp),
                     trailingContent = {
@@ -369,7 +389,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                 )
                 ListItem(
                     headlineContent = { Text("Backup import") },
-                    supportingContent = { Text("Abhi ka sara data replace ho jayega") },
+                    supportingContent = { Text(tr("Abhi ka sara data replace ho jayega", "Replaces all current data")) },
                     leadingContent = { Icon(Icons.Default.Download, null) },
                     trailingContent = {
                         TextButton(onClick = { importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "application/x-zip-compressed")) }) {
@@ -402,7 +422,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                 TextButton(onClick = {
                     showTimePicker = false
                     if (digests.any { it.hour == pickerState.hour && it.minute == pickerState.minute }) {
-                        scope.launch { snackbar.showSnackbar("Ye time pehle se hai") }
+                        scope.launch { snackbar.showSnackbar(tr("Ye time pehle se hai", "This time already exists")) }
                     } else {
                         vm.addDigest(pickerState.hour, pickerState.minute)
                     }
@@ -416,7 +436,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
         AlertDialog(
             onDismissRequest = { pendingImport = null },
             title = { Text("Backup import karein?") },
-            text = { Text("Is phone pe abhi jo bhi notes hain, wo hata ke backup wale aa jayenge.") },
+            text = { Text(tr("Is phone pe abhi jo bhi notes hain, wo hata ke backup wale aa jayenge.", "All notes on this phone will be replaced by the ones in the backup.")) },
             confirmButton = {
                 TextButton(onClick = {
                     pendingImport = null
@@ -424,7 +444,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = viewModel(factory
                         vm.import(uri)
                             .onSuccess {
                                 vm.intervalsText = Scheduler.formatIntervals(vm.repo.defaultIntervals)
-                                snackbar.showSnackbar("Import ho gaya: $it notes")
+                                snackbar.showSnackbar(tr("Import ho gaya: $it notes", "Imported: $it notes"))
                             }
                             .onFailure { snackbar.showSnackbar("Import fail: ${it.message}") }
                     }

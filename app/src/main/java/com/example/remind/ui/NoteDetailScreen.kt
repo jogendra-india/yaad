@@ -1,5 +1,7 @@
 package com.example.remind.ui
 
+import com.example.remind.tr
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -160,7 +162,7 @@ fun NoteDetailScreen(
                         IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "More") }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             DropdownMenuItem(
-                                text = { Text("Aaj due karo") },
+                                text = { Text(tr("Aaj due karo", "Make due today")) },
                                 leadingIcon = { Icon(Icons.Default.Today, null) },
                                 onClick = { menu = false; vm.dueToday(current) },
                             )
@@ -191,7 +193,7 @@ fun NoteDetailScreen(
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
-                    Text("Abhi revise karo")
+                    Text(tr("Abhi revise karo", "Revise now"))
                 }
             }
         },
@@ -213,7 +215,7 @@ fun NoteDetailScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 AssistChip(onClick = {}, label = { Text(deckName(note.subject)) }, leadingIcon = { Icon(Icons.Default.Folder, null, Modifier.size(18.dp)) })
                 Text(
-                    if (note.mastered) "Mastered" else "Agla revision: ${dueLabel(note.nextDueDay, day)}",
+                    if (note.mastered) "Mastered" else tr("Agla revision: ${dueLabel(note.nextDueDay, day)}", "Next revision: ${dueLabel(note.nextDueDay, day)}"),
                     style = MaterialTheme.typography.labelLarge,
                     color = dueColor(note.nextDueDay, day, note.mastered),
                 )
@@ -237,7 +239,7 @@ fun NoteDetailScreen(
                 logs.forEach { LogRow(it) }
             }
             Text(
-                "Banaya: " + dateFormat.format(Instant.ofEpochMilli(note.createdAt).atZone(ZoneId.systemDefault())),
+                tr("Banaya: ", "Created: ") + dateFormat.format(Instant.ofEpochMilli(note.createdAt).atZone(ZoneId.systemDefault())),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -249,8 +251,8 @@ fun NoteDetailScreen(
         val current = item
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Note delete karein?") },
-            text = { Text("Note, uski photos, voice aur video sab hat jayenge. Ye undo nahi hoga.") },
+            title = { Text(tr("Note delete karein?", "Delete note?")) },
+            text = { Text(tr("Note, uski photos, voice aur video sab hat jayenge. Ye undo nahi hoga.", "The note and its photos, voice and video will all be removed. This can't be undone.")) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
@@ -334,7 +336,7 @@ private fun LogRow(log: ReviewLog) {
 
 @Composable
 fun resultStyle(result: ReviewResult): Pair<String, Color> = when (result) {
-    ReviewResult.GOOD -> "Yaad tha" to MaterialTheme.colorScheme.tertiary
-    ReviewResult.HARD -> "Thoda thoda" to StarColor
-    ReviewResult.FORGOT -> "Bhool gaya" to MaterialTheme.colorScheme.error
+    ReviewResult.GOOD -> tr("Yaad tha", "Remembered") to MaterialTheme.colorScheme.tertiary
+    ReviewResult.HARD -> tr("Thoda thoda", "Partly") to StarColor
+    ReviewResult.FORGOT -> tr("Bhool gaya", "Forgot") to MaterialTheme.colorScheme.error
 }

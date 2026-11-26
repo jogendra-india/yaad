@@ -1,5 +1,7 @@
 package com.example.remind.ui
 
+import com.example.remind.tr
+
 import android.media.MediaPlayer
 import android.widget.MediaController
 import android.widget.VideoView
@@ -68,10 +70,10 @@ fun dueLabel(nextDueDay: Long, today: Long): String {
     val diff = nextDueDay - today
     return when {
         diff < -1 -> "${-diff} din late"
-        diff == -1L -> "Kal se due"
-        diff == 0L -> "Aaj"
-        diff == 1L -> "Kal"
-        else -> "$diff din baad"
+        diff == -1L -> tr("Kal se due", "Due since yesterday")
+        diff == 0L -> tr("Aaj", "Today")
+        diff == 1L -> tr("Kal", "Tomorrow")
+        else -> tr("$diff din baad", "In $diff days")
     }
 }
 

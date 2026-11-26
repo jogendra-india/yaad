@@ -1,5 +1,7 @@
 package com.example.remind.ui
 
+import com.example.remind.tr
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -263,7 +265,7 @@ fun VoiceRecorderDialog(store: AttachmentStore, onDismiss: () -> Unit, onSaved: 
         } catch (e: Exception) {
             r.release()
             out.delete()
-            error = "Recording start nahi hui: ${e.message}"
+            error = tr("Recording start nahi hui: ${e.message}", "Couldn't start recording: ${e.message}")
         }
     }
 
@@ -309,7 +311,7 @@ fun VoiceRecorderDialog(store: AttachmentStore, onDismiss: () -> Unit, onSaved: 
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 when {
                     !granted -> {
-                        Text(if (denied) "Mic permission chahiye. Settings me allow karo." else "Voice record karne ke liye mic permission do.")
+                        Text(if (denied) tr("Mic permission chahiye. Settings me allow karo.", "Mic permission needed. Allow it in Settings.") else tr("Voice record karne ke liye mic permission do.", "Allow mic access to record a voice note."))
                         Spacer(Modifier.height(12.dp))
                         Button(onClick = { permission.launch(Manifest.permission.RECORD_AUDIO) }) { Text("Allow mic") }
                     }
@@ -323,7 +325,7 @@ fun VoiceRecorderDialog(store: AttachmentStore, onDismiss: () -> Unit, onSaved: 
                                 } else if (stop()) {
                                     file?.let { onSaved(it.name) }
                                 } else {
-                                    error = "Recording bahut chhoti thi, dobara try karo."
+                                    error = tr("Recording bahut chhoti thi, dobara try karo.", "Recording was too short, try again.")
                                 }
                             },
                             modifier = Modifier.size(72.dp),
@@ -336,7 +338,7 @@ fun VoiceRecorderDialog(store: AttachmentStore, onDismiss: () -> Unit, onSaved: 
                         }
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            if (recorder == null) "Tap karke record shuru karo" else "Recording… tap karke save karo",
+                            if (recorder == null) tr("Tap karke record shuru karo", "Tap to start recording") else tr("Recording… tap karke save karo", "Recording… tap to save"),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }

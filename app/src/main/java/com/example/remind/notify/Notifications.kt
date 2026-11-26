@@ -1,5 +1,7 @@
 package com.example.remind.notify
 
+import com.example.remind.tr
+
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -36,11 +38,11 @@ object Notifications {
         if (!canPost(context)) return
 
         val count = dueTitles.size
-        val title = if (count == 0) "Aaj kuch due nahi hai" else "Revision time: $count due"
+        val title = if (count == 0) tr("Aaj kuch due nahi hai", "Nothing due today") else "Revision time: $count due"
         val text = when (count) {
-            0 -> "Sab revise ho chuka. Badhiya!"
+            0 -> tr("Sab revise ho chuka. Badhiya!", "All revised. Great job!")
             1 -> dueTitles.first()
-            else -> "$count cheeze revise karni hai"
+            else -> tr("$count cheeze revise karni hai", "$count things to revise")
         }
 
         val style = NotificationCompat.InboxStyle().setBigContentTitle(title)

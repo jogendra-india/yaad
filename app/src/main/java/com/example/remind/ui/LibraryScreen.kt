@@ -1,5 +1,7 @@
 package com.example.remind.ui
 
+import com.example.remind.tr
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -175,7 +177,7 @@ fun LibraryScreen(
             OutlinedTextField(
                 value = state.query,
                 onValueChange = vm::setQuery,
-                placeholder = { Text("Title, keyword ya notes me search…") },
+                placeholder = { Text(tr("Title, keyword ya notes me search…", "Search titles, keywords or notes…")) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (state.query.isNotEmpty()) {
@@ -192,7 +194,7 @@ fun LibraryScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                item { FilterOption("Sab", filter == LibraryFilter.All) { vm.setFilter(LibraryFilter.All) } }
+                item { FilterOption(tr("Sab", "All"), filter == LibraryFilter.All) { vm.setFilter(LibraryFilter.All) } }
                 item {
                     FilterOption("Starred", filter == LibraryFilter.Starred, leading = {
                         Icon(Icons.Default.Star, null, tint = StarColor, modifier = Modifier.size(18.dp))
@@ -218,9 +220,9 @@ fun LibraryScreen(
                 ) {
                     Icon(Icons.Default.SearchOff, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(48.dp))
                     Spacer(Modifier.height(12.dp))
-                    Text("Kuch nahi mila", style = MaterialTheme.typography.titleMedium)
+                    Text(tr("Kuch nahi mila", "Nothing found"), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        if (state.query.isNotEmpty()) "Dusra keyword try karo" else "Is filter me abhi koi note nahi hai",
+                        if (state.query.isNotEmpty()) tr("Dusra keyword try karo", "Try another keyword") else tr("Is filter me abhi koi note nahi hai", "No notes in this filter yet"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

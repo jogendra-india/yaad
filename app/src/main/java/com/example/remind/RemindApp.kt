@@ -23,6 +23,7 @@ class RemindApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        Lang.english = getSharedPreferences(Lang.PREFS, MODE_PRIVATE).getBoolean(Lang.KEY_ENGLISH, false)
         Notifications.createChannel(this)
         appScope.launch {
             repository.seedIfNeeded()

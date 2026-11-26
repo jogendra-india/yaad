@@ -1,5 +1,7 @@
 package com.example.remind.ui
 
+import com.example.remind.tr
+
 import android.content.ActivityNotFoundException
 import android.net.Uri
 import android.widget.Toast
@@ -240,7 +242,7 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
         } catch (e: ActivityNotFoundException) {
             pendingCapture = null
             file.delete()
-            Toast.makeText(context, "Camera app nahi mila", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, tr("Camera app nahi mila", "No camera app found"), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -253,7 +255,7 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (vm.isNew) "Naya note" else "Edit note") },
+                title = { Text(if (vm.isNew) tr("Naya note", "New note") else "Edit note") },
                 navigationIcon = {
                     IconButton(onClick = ::tryBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                 },
@@ -277,9 +279,9 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
                 value = vm.title,
                 onValueChange = { vm.title = it; if (it.isNotBlank()) vm.titleError = false },
                 label = { Text("Title *") },
-                placeholder = { Text("Kya padha?") },
+                placeholder = { Text(tr("Kya padha?", "What did you study?")) },
                 isError = vm.titleError,
-                supportingText = if (vm.titleError) ({ Text("Title zaroori hai") }) else null,
+                supportingText = if (vm.titleError) ({ Text(tr("Title zaroori hai", "Title is required")) }) else null,
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth(),
@@ -298,7 +300,7 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
                     }
                 },
                 label = { Text("Keywords") },
-                placeholder = { Text("Likho, comma ya Enter se add") },
+                placeholder = { Text(tr("Likho, comma ya Enter se add", "Type, add with comma or Enter")) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { vm.commitKeywordInput() }),
@@ -339,7 +341,7 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
                     label = { Text("Gallery") },
                     leadingIcon = { Icon(Icons.Default.PhotoLibrary, null) },
                 )
-                AssistChip(onClick = { showDraw = true }, label = { Text("Likho") }, leadingIcon = { Icon(Icons.Default.Draw, null) })
+                AssistChip(onClick = { showDraw = true }, label = { Text(tr("Likho", "Draw")) }, leadingIcon = { Icon(Icons.Default.Draw, null) })
                 AssistChip(onClick = { showVoice = true }, label = { Text("Voice") }, leadingIcon = { Icon(Icons.Default.Mic, null) })
                 AssistChip(
                     onClick = { launchCapture("mp4") { recordVideo.launch(it) } },
@@ -365,9 +367,9 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
             OutlinedTextField(
                 value = vm.intervalsText,
                 onValueChange = { vm.intervalsText = it },
-                label = { Text("Revision schedule (din)") },
+                label = { Text(tr("Revision schedule (din)", "Revision schedule (days)")) },
                 supportingText = {
-                    Text(if (vm.intervalsValid) "Har revision ke baad itne din ka gap" else "Sirf positive numbers, comma se alag")
+                    Text(if (vm.intervalsValid) tr("Har revision ke baad itne din ka gap", "Days of gap after each revision") else tr("Sirf positive numbers, comma se alag", "Positive numbers only, comma separated"))
                 },
                 isError = !vm.intervalsValid,
                 singleLine = true,
@@ -417,10 +419,10 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
     if (confirmDiscard) {
         AlertDialog(
             onDismissRequest = { confirmDiscard = false },
-            title = { Text("Changes discard karein?") },
-            text = { Text("Save nahi kiya to ye changes chale jayenge.") },
+            title = { Text(tr("Changes discard karein?", "Discard changes?")) },
+            text = { Text(tr("Save nahi kiya to ye changes chale jayenge.", "These changes will be lost if you don't save.")) },
             confirmButton = { TextButton(onClick = { confirmDiscard = false; onBack() }) { Text("Discard") } },
-            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Rukko") } },
+            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text(tr("Rukko", "Keep editing")) } },
         )
     }
 }
