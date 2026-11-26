@@ -1,5 +1,7 @@
 package com.example.remind.ui
 
+import com.example.remind.notify.DigestScheduler
+
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Remove
@@ -121,6 +123,9 @@ class SettingsViewModel(val repo: Repository, private val backup: Backup) : View
 
     fun setRandom(enabled: Boolean? = null, start: Int? = null, end: Int? = null, count: Int? = null) =
         viewModelScope.launch { repo.setRandom(enabled, start, end, count) }
+
+    /** The day's random reminder times, in minutes of the day. */
+    fun randomTimes(day: LocalDate): List<Int> = DigestScheduler.randomTimes(day, repo.randomPlan())
 
     var intervalsText by mutableStateOf(Scheduler.formatIntervals(repo.defaultIntervals))
     val intervalsValid get() = Scheduler.parseIntervals(intervalsText) != null
@@ -335,6 +340,14 @@ fun SettingsScreen(onBack: () -> Unit, onOpenHistory: () -> Unit, vm: SettingsVi
                             Icon(Icons.Default.Add, contentDescription = "More")
                         }
                     }
+                    val today = LocalDate.now()
+                    val todayTimes = remember(randomStart, randomEnd, randomCount, today) { vm.randomTimes(today) }
+                    Text(
+                        tr("Aaj ke time: ", "Today's times: ") + todayTimes.joinToString(", ") { minuteLabel(it) },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
                 }
                 if (!randomOn && digests.isEmpty()) {
                     Text(

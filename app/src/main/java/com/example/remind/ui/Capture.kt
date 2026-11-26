@@ -130,7 +130,11 @@ fun HandwritingDialog(store: AttachmentStore, onDismiss: () -> Unit, onSaved: (S
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnClickOutside = false,
+            decorFitsSystemWindows = false,
+        ),
     ) {
         Column(
             Modifier

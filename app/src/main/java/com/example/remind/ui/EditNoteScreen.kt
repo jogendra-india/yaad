@@ -1,5 +1,8 @@
 package com.example.remind.ui
 
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
 import com.example.remind.tr
 
 import android.content.ActivityNotFoundException
@@ -143,17 +146,35 @@ class EditNoteViewModel(private val repo: Repository, state: SavedStateHandle) :
         }
     }
 
-    /** Returns false (and flags the field) when something required is missing. */
+    /**
+     * Title is optional: a note only needs some content. A blank title is filled
+     * from the notes, the keywords, or the attachment type and date.
+     */
+    private fun autoTitle(): String {
+        body.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() }?.let { return it.take(60) }
+        if (keywords.isNotEmpty()) return keywords.take(3).joinToString(", ")
+        val kind = when (attachments.firstOrNull()?.type) {
+            AttachmentType.PHOTO -> "Photo"
+            AttachmentType.HANDWRITING -> tr("Likha hua", "Handwriting")
+            AttachmentType.AUDIO -> "Voice"
+            AttachmentType.VIDEO -> "Video"
+            null -> "Note"
+        }
+        return "$kind · " + LocalDate.now().format(DateTimeFormatter.ofPattern("d MMM"))
+    }
+
+    /** Returns false (and flags the field) when the note is empty or the schedule is invalid. */
     fun save(onDone: (Long) -> Unit): Boolean {
         commitKeywordInput()
-        titleError = title.isBlank()
+        titleError = title.isBlank() && body.isBlank() && keywords.isEmpty() && attachments.isEmpty()
         val intervals = Scheduler.parseIntervals(intervalsText)
         if (titleError || intervals == null || saving) return false
         saving = true
+        val finalTitle = title.trim().ifEmpty { autoTitle() }
         viewModelScope.launch {
             val id = repo.saveNote(
                 existing = existing,
-                title = title.trim(),
+                title = finalTitle,
                 body = body.trim(),
                 subject = subject.trim(),
                 keywords = keywords.toList(),
@@ -278,10 +299,10 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
             OutlinedTextField(
                 value = vm.title,
                 onValueChange = { vm.title = it; if (it.isNotBlank()) vm.titleError = false },
-                label = { Text("Title *") },
-                placeholder = { Text(tr("Kya padha?", "What did you study?")) },
+                label = { Text("Title") },
+                placeholder = { Text(tr("Kya padha? (optional)", "What did you study? (optional)")) },
                 isError = vm.titleError,
-                supportingText = if (vm.titleError) ({ Text(tr("Title zaroori hai", "Title is required")) }) else null,
+                supportingText = if (vm.titleError) ({ Text(tr("Kuch to daalo: title, notes, keyword ya photo", "Add something: a title, notes, a keyword or a photo")) }) else null,
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth(),
@@ -301,6 +322,9 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
                 },
                 label = { Text("Keywords") },
                 placeholder = { Text(tr("Likho, comma ya Enter se add", "Type, add with comma or Enter")) },
+                supportingText = {
+                    Text(tr("Yaad karne ke hint: revision me jawab ke saath dikhte hain, search me bhi kaam aate hain", "Recall hints: shown with the answer when revising, and searchable"))
+                },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { vm.commitKeywordInput() }),
@@ -440,6 +464,9 @@ private fun SubjectField(vm: EditNoteViewModel) {
             onValueChange = { vm.subject = it; expanded = true },
             label = { Text("Deck") },
             placeholder = { Text("e.g. Physics, DSA, History") },
+            supportingText = {
+                Text(tr("Subject ka group: Home pe notes isi se bante hain, aur deck-wise practice kar sakte ho", "Subject group: notes are grouped by it on Home, and you can practise one deck"))
+            },
             singleLine = true,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
             modifier = Modifier
