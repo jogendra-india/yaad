@@ -77,6 +77,13 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.filled.Style
+import androidx.compose.material.icons.filled.ViewCarousel
+import com.example.remind.Lang
 import com.example.remind.RemindApp
 import com.example.remind.data.NoteWithAttachments
 import com.example.remind.data.Repository
@@ -89,8 +96,15 @@ import kotlinx.coroutines.launch
 /**
  * Modes: due queue (default), a single note, or practice over a deck / starred notes.
  * Practice never changes the schedule.
+ *
+ * Two ways to go through the queue: flashcard (recall first, then "Show answer") or full view
+ * (every note shown in full; swipe between them, rating is optional).
  */
-class ReviewViewModel(private val repo: Repository, state: SavedStateHandle) : ViewModel() {
+class ReviewViewModel(
+    private val repo: Repository,
+    private val prefs: SharedPreferences,
+    state: SavedStateHandle,
+) : ViewModel() {
     private val noteId: Long = state["noteId"] ?: -1L
     private val deck: String? = state["deck"]
     private val starred: Boolean = state["starred"] ?: false
@@ -101,39 +115,55 @@ class ReviewViewModel(private val repo: Repository, state: SavedStateHandle) : V
         else -> "Revision"
     }
 
-    var ids by mutableStateOf<List<Long>?>(null)
+    /** Notes in this session, or null while loading. */
+    var notes by mutableStateOf<List<NoteWithAttachments>?>(null)
         private set
     var index by mutableIntStateOf(0)
         private set
-    var current by mutableStateOf<NoteWithAttachments?>(null)
-        private set
     var revealed by mutableStateOf(false)
     val counts = mutableStateMapOf<ReviewResult, Int>()
+    /** Rating given to each note this session, by note id. */
+    val rated = mutableStateMapOf<Long, ReviewResult>()
+    var fullView by mutableStateOf(prefs.getBoolean(KEY_FULL_VIEW, false))
+        private set
     private var busy = false
 
     val store get() = repo.store
-    val finished get() = ids?.let { index >= it.size } ?: false
+    val total get() = notes?.size ?: 0
+    val current get() = notes?.getOrNull(index)
+    val finished get() = notes?.let { index >= it.size } ?: false
 
     init {
         viewModelScope.launch {
-            ids = when {
+            val ids = when {
                 noteId >= 0 -> listOf(noteId)
                 deck != null -> repo.idsInDeck(deck).shuffled()
                 starred -> repo.starredIds().shuffled()
                 else -> repo.dueIds()
             }
-            loadCurrent()
+            // Notes deleted meanwhile are dropped.
+            notes = ids.mapNotNull { repo.get(it) }
         }
     }
 
-    private suspend fun loadCurrent() {
-        val list = ids ?: return
-        current = list.getOrNull(index)?.let { repo.get(it) }
-        // Note deleted meanwhile: skip it.
-        if (current == null && index < list.size) {
-            index++
-            loadCurrent()
+    fun toggleFullView() {
+        fullView = !fullView
+        prefs.edit().putBoolean(KEY_FULL_VIEW, fullView).apply()
+    }
+
+    /** Full view: the pager settled on [page]. */
+    fun goTo(page: Int) {
+        if (page != index && page in 0 until total) {
+            index = page
+            revealed = false
         }
+    }
+
+    /** First unrated note after the current one (wrapping round), or the end if all are rated. */
+    private fun nextUnrated(): Int {
+        val list = notes ?: return 0
+        val order = (index + 1 until list.size) + (0 until index)
+        return order.firstOrNull { list[it].note.id !in rated } ?: list.size
     }
 
     /** Days until the next review if [result] is picked, or null if the note would be mastered. */
@@ -146,29 +176,35 @@ class ReviewViewModel(private val repo: Repository, state: SavedStateHandle) : V
 
     fun rate(result: ReviewResult) {
         val item = current ?: return
-        if (busy) return
+        if (busy || item.note.id in rated) return
         busy = true
         viewModelScope.launch {
             if (!practice) repo.review(item.note.id, result)
             counts[result] = (counts[result] ?: 0) + 1
+            rated[item.note.id] = result
             revealed = false
-            index++
-            loadCurrent()
+            index = nextUnrated()
             busy = false
         }
     }
 
-    fun toggleStar() {
-        val item = current ?: return
+    fun toggleStar(item: NoteWithAttachments) {
         val updated = !item.note.starred
-        current = item.copy(note = item.note.copy(starred = updated))
+        notes = notes?.map { if (it.note.id == item.note.id) it.copy(note = it.note.copy(starred = updated)) else it }
         viewModelScope.launch { repo.setStarred(item.note.id, updated) }
     }
 
     companion object {
+        private const val KEY_FULL_VIEW = "review_full_view"
+
         val Factory = viewModelFactory {
             initializer {
-                ReviewViewModel((this[APPLICATION_KEY] as RemindApp).repository, createSavedStateHandle())
+                val app = this[APPLICATION_KEY] as RemindApp
+                ReviewViewModel(
+                    app.repository,
+                    app.getSharedPreferences(Lang.PREFS, Context.MODE_PRIVATE),
+                    createSavedStateHandle(),
+                )
             }
         }
     }
@@ -180,9 +216,9 @@ fun ReviewScreen(onClose: () -> Unit, vm: ReviewViewModel = viewModel(factory = 
     val context = LocalContext.current
     LaunchedEffect(Unit) { if (!vm.practice) Notifications.cancelAll(context) }
 
-    val total = vm.ids?.size ?: 0
+    val total = vm.total
     val progress by animateFloatAsState(
-        targetValue = if (total == 0) 0f else vm.index.toFloat() / total,
+        targetValue = if (total == 0) 0f else vm.rated.size.toFloat() / total,
         animationSpec = tween(400),
         label = "progress",
     )
@@ -200,8 +236,14 @@ fun ReviewScreen(onClose: () -> Unit, vm: ReviewViewModel = viewModel(factory = 
                             Text(
                                 "${vm.index + 1}/$total",
                                 style = MaterialTheme.typography.labelLarge,
-                                modifier = Modifier.padding(end = 16.dp),
                             )
+                            IconButton(onClick = vm::toggleFullView) {
+                                Icon(
+                                    if (vm.fullView) Icons.Default.Style else Icons.Default.ViewCarousel,
+                                    contentDescription = if (vm.fullView) tr("Flashcard mode", "Flashcard mode")
+                                    else tr("Poora note dikhao, swipe karke agla", "Show full notes, swipe for next"),
+                                )
+                            }
                         }
                     },
                 )
@@ -213,7 +255,33 @@ fun ReviewScreen(onClose: () -> Unit, vm: ReviewViewModel = viewModel(factory = 
             }
         },
         bottomBar = {
-            if (vm.current != null && !vm.finished) {
+            val item = vm.current
+            if (item != null && !vm.finished && vm.fullView) {
+                Surface(tonalElevation = 3.dp) {
+                    Column(
+                        Modifier
+                            .navigationBarsPadding()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        val given = vm.rated[item.note.id]
+                        if (given == null) {
+                            RatingButtons(vm)
+                        } else {
+                            val (label, color) = resultStyle(given)
+                            Text(tr("Rating: $label", "Rated: $label"), style = MaterialTheme.typography.labelLarge, color = color)
+                        }
+                        if (total > 1) {
+                            Text(
+                                tr("← swipe karke pichhla / agla →", "← swipe for previous / next →"),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            } else if (item != null && !vm.finished) {
                 Surface(tonalElevation = 3.dp) {
                     AnimatedContent(
                         targetState = vm.revealed,
@@ -248,9 +316,10 @@ fun ReviewScreen(onClose: () -> Unit, vm: ReviewViewModel = viewModel(factory = 
                 .padding(padding),
         ) {
             when {
-                vm.ids == null -> Unit
+                vm.notes == null -> Unit
                 total == 0 -> NothingToReview(vm.practice, onClose)
                 vm.finished -> FinishedView(vm, onClose)
+                vm.fullView -> FullViewPager(vm)
                 else -> AnimatedContent(
                     targetState = vm.current,
                     contentKey = { it?.note?.id },
@@ -260,15 +329,34 @@ fun ReviewScreen(onClose: () -> Unit, vm: ReviewViewModel = viewModel(factory = 
                     },
                     label = "card",
                 ) { item ->
-                    if (item != null) ReviewCard(item, vm)
+                    if (item != null) ReviewCard(item, vm, revealed = vm.revealed)
                 }
             }
         }
     }
 }
 
+/** Full view: every note shown in full, side by side; swipe to move between them. */
 @Composable
-private fun ReviewCard(item: NoteWithAttachments, vm: ReviewViewModel) {
+private fun FullViewPager(vm: ReviewViewModel) {
+    val notes = vm.notes ?: return
+    val pagerState = rememberPagerState(initialPage = vm.index.coerceIn(0, notes.lastIndex)) { notes.size }
+    // Swipe → current note; rating → pager follows to the next unrated note.
+    LaunchedEffect(pagerState.settledPage) { vm.goTo(pagerState.settledPage) }
+    LaunchedEffect(vm.index) {
+        if (vm.index in notes.indices && vm.index != pagerState.settledPage) pagerState.animateScrollToPage(vm.index)
+    }
+    HorizontalPager(
+        state = pagerState,
+        key = { notes[it].note.id },
+        modifier = Modifier.fillMaxSize(),
+    ) { page ->
+        ReviewCard(notes[page], vm, revealed = true)
+    }
+}
+
+@Composable
+private fun ReviewCard(item: NoteWithAttachments, vm: ReviewViewModel, revealed: Boolean) {
     val note = item.note
     Column(
         Modifier
@@ -289,7 +377,7 @@ private fun ReviewCard(item: NoteWithAttachments, vm: ReviewViewModel) {
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f),
                     )
-                    IconButton(onClick = vm::toggleStar) {
+                    IconButton(onClick = { vm.toggleStar(item) }) {
                         AnimatedContent(
                             targetState = note.starred,
                             transitionSpec = { scaleIn(spring(Spring.DampingRatioMediumBouncy)) togetherWith scaleOut() },
@@ -306,7 +394,7 @@ private fun ReviewCard(item: NoteWithAttachments, vm: ReviewViewModel) {
                 Text(note.title, style = MaterialTheme.typography.headlineMedium)
 
                 AnimatedVisibility(
-                    visible = !vm.revealed,
+                    visible = !revealed,
                     enter = fadeIn(),
                     exit = fadeOut() + shrinkVertically(),
                 ) {
@@ -318,7 +406,7 @@ private fun ReviewCard(item: NoteWithAttachments, vm: ReviewViewModel) {
                 }
 
                 AnimatedVisibility(
-                    visible = vm.revealed,
+                    visible = revealed,
                     enter = expandVertically(spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
                     exit = shrinkVertically() + fadeOut(),
                 ) {
