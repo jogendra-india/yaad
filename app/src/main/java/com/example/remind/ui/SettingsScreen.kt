@@ -514,6 +514,10 @@ fun SettingsScreen(onBack: () -> Unit, onOpenHistory: () -> Unit, vm: SettingsVi
                 )
             }
 
+            SettingsSection("Update") {
+                AppUpdateSection()
+            }
+
             Text(
                 "Yaad v${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.bodySmall,
