@@ -18,7 +18,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -38,7 +37,7 @@ fun AppUpdateSection() {
     val state = Updater.state
     val current = "v${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})"
 
-    LaunchedEffect(Unit) { if (Updater.state == UpdateState.Idle) Updater.check() }
+    // No network call until the user taps "Check".
     // Back from the "install unknown apps" screen: carry on with the install if it was allowed.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         val ready = Updater.state as? UpdateState.Ready
@@ -56,8 +55,14 @@ fun AppUpdateSection() {
         UpdateState.Idle, UpdateState.UpToDate -> ListItem(
             headlineContent = { Text(if (state == UpdateState.UpToDate) tr("Latest version hai", "You're up to date") else "App update") },
             supportingContent = { Text(current) },
-            leadingContent = { Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary) },
-            trailingContent = { TextButton(onClick = Updater::check) { Text(tr("Check karo", "Check")) } },
+            leadingContent = {
+                Icon(
+                    if (state == UpdateState.UpToDate) Icons.Default.CheckCircle else Icons.Default.SystemUpdate,
+                    null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            },
+            trailingContent = { TextButton(onClick = Updater::check) { Text(tr("Update check karo", "Check for update")) } },
             colors = transparent,
         )
         UpdateState.Checking -> ListItem(
