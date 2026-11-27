@@ -5,6 +5,7 @@ import com.example.remind.tr
 import android.media.MediaPlayer
 import android.widget.MediaController
 import android.widget.VideoView
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,6 +13,7 @@ import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -23,6 +25,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.vector.ImageVector
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -163,12 +172,8 @@ fun AttachmentGallery(items: List<Pair<File, AttachmentType>>, modifier: Modifie
         audio.forEach { AudioPlayer(it.first) }
     }
 
-    viewing?.let { (file, type) ->
-        if (type == AttachmentType.VIDEO) {
-            VideoPlayerDialog(file) { viewing = null }
-        } else {
-            ImageViewerDialog(file, whiteBackground = type == AttachmentType.HANDWRITING) { viewing = null }
-        }
+    viewing?.let { item ->
+        MediaViewerDialog(visual, startIndex = visual.indexOf(item).coerceAtLeast(0)) { viewing = null }
     }
 }
 
@@ -239,51 +244,166 @@ fun AudioPlayer(file: File) {
 
 @Composable
 fun ImageViewerDialog(file: File, whiteBackground: Boolean, onDismiss: () -> Unit) {
+    FullScreenDialog(onDismiss) {
+        ZoomableImage(file, whiteBackground)
+    }
+}
+
+/**
+ * Full-screen viewer for a note's photos, sketches and videos. Swipe left/right (or use the
+ * arrows) to move between them without closing the viewer.
+ */
+@Composable
+fun MediaViewerDialog(items: List<Pair<File, AttachmentType>>, startIndex: Int, onDismiss: () -> Unit) {
+    if (items.isEmpty()) return
+    val pagerState = rememberPagerState(initialPage = startIndex.coerceIn(0, items.lastIndex)) { items.size }
+    val scope = rememberCoroutineScope()
+    var zoomed by remember { mutableStateOf(false) }
+
+    FullScreenDialog(onDismiss) {
+        HorizontalPager(
+            state = pagerState,
+            userScrollEnabled = !zoomed,
+            key = { items[it].first.absolutePath },
+            modifier = Modifier.fillMaxSize(),
+        ) { page ->
+            val (file, type) = items[page]
+            val isCurrent = pagerState.settledPage == page
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                when {
+                    type != AttachmentType.VIDEO -> ZoomableImage(
+                        file = file,
+                        whiteBackground = type == AttachmentType.HANDWRITING,
+                        active = isCurrent,
+                        onZoomChange = { if (isCurrent) zoomed = it },
+                    )
+                    // Only the page in view plays; neighbours show a still frame.
+                    isCurrent -> VideoSurface(file)
+                    else -> {
+                        AsyncImage(
+                            model = file,
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        Icon(Icons.Default.PlayCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(72.dp))
+                    }
+                }
+            }
+        }
+
+        if (items.size > 1) {
+            val current = pagerState.currentPage
+            Text(
+                "${current + 1} / ${items.size}",
+                color = Color.White,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 20.dp)
+                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+            )
+            if (current > 0) {
+                PagerArrow(Icons.AutoMirrored.Filled.KeyboardArrowLeft, tr("Pichhla", "Previous"), Modifier.align(Alignment.CenterStart)) {
+                    scope.launch { pagerState.animateScrollToPage(current - 1) }
+                }
+            }
+            if (current < items.lastIndex) {
+                PagerArrow(Icons.AutoMirrored.Filled.KeyboardArrowRight, tr("Agla", "Next"), Modifier.align(Alignment.CenterEnd)) {
+                    scope.launch { pagerState.animateScrollToPage(current + 1) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PagerArrow(icon: ImageVector, description: String, modifier: Modifier, onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier
+            .padding(8.dp)
+            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+    ) {
+        Icon(icon, contentDescription = description, tint = Color.White)
+    }
+}
+
+/**
+ * Pinch-to-zoom image. Single-finger drags only pan while zoomed in, so at normal size they
+ * fall through to a surrounding pager. Zoom resets when the image stops being [active].
+ */
+@OptIn(ExperimentalFoundationApi::class) // transformable(canPan = …)
+@Composable
+private fun ZoomableImage(
+    file: File,
+    whiteBackground: Boolean,
+    active: Boolean = true,
+    onZoomChange: (Boolean) -> Unit = {},
+) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
     val transform = rememberTransformableState { zoom, pan, _ ->
         scale = (scale * zoom).coerceIn(1f, 6f)
-        offsetX += pan.x
-        offsetY += pan.y
+        if (scale > 1f) {
+            offsetX += pan.x
+            offsetY += pan.y
+        } else {
+            offsetX = 0f
+            offsetY = 0f
+        }
+        onZoomChange(scale > 1f)
     }
-    FullScreenDialog(onDismiss) {
-        AsyncImage(
-            model = file,
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .fillMaxSize()
-                .then(if (whiteBackground) Modifier.background(Color.White) else Modifier)
-                .transformable(transform)
-                .graphicsLayer(scaleX = scale, scaleY = scale, translationX = offsetX, translationY = offsetY),
-        )
+    LaunchedEffect(active) {
+        if (!active) {
+            scale = 1f
+            offsetX = 0f
+            offsetY = 0f
+            onZoomChange(false)
+        }
     }
+    AsyncImage(
+        model = file,
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier
+            .fillMaxSize()
+            .then(if (whiteBackground) Modifier.background(Color.White) else Modifier)
+            .transformable(transform, canPan = { scale > 1f })
+            .graphicsLayer(scaleX = scale, scaleY = scale, translationX = offsetX, translationY = offsetY),
+    )
 }
 
 @Composable
 fun VideoPlayerDialog(file: File, onDismiss: () -> Unit) {
     FullScreenDialog(onDismiss) {
-        AndroidView(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(vertical = 56.dp),
-            factory = { context ->
-                VideoView(context).apply {
-                    val controller = MediaController(context)
-                    controller.setAnchorView(this)
-                    setMediaController(controller)
-                    setVideoPath(file.absolutePath)
-                    setOnPreparedListener { start() }
-                }
-            },
-            onRelease = { it.stopPlayback() },
-        )
+        VideoSurface(file)
     }
 }
 
 @Composable
-private fun FullScreenDialog(onDismiss: () -> Unit, content: @Composable () -> Unit) {
+private fun VideoSurface(file: File) {
+    AndroidView(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(vertical = 56.dp),
+        factory = { context ->
+            VideoView(context).apply {
+                val controller = MediaController(context)
+                controller.setAnchorView(this)
+                setMediaController(controller)
+                setVideoPath(file.absolutePath)
+                setOnPreparedListener { start() }
+            }
+        },
+        onRelease = { it.stopPlayback() },
+    )
+}
+
+@Composable
+private fun FullScreenDialog(onDismiss: () -> Unit, content: @Composable BoxScope.() -> Unit) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(
             Modifier

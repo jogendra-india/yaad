@@ -448,15 +448,19 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
         val item = vm.attachments.firstOrNull { it.fileName == name }
         if (item == null) {
             LaunchedEffect(name) { viewing = null }
-        } else when (item.type) {
-            AttachmentType.VIDEO -> VideoPlayerDialog(store.file(name)) { viewing = null }
-            AttachmentType.AUDIO -> AlertDialog(
+        } else if (item.type == AttachmentType.AUDIO) {
+            AlertDialog(
                 onDismissRequest = { viewing = null },
                 title = { Text("Voice note") },
                 text = { AudioPlayer(store.file(name)) },
                 confirmButton = { TextButton(onClick = { viewing = null }) { Text("Close") } },
             )
-            else -> ImageViewerDialog(store.file(name), whiteBackground = item.type == AttachmentType.HANDWRITING) { viewing = null }
+        } else {
+            val visual = vm.attachments.filter { it.type != AttachmentType.AUDIO }
+            MediaViewerDialog(
+                items = visual.map { store.file(it.fileName) to it.type },
+                startIndex = visual.indexOfFirst { it.fileName == name },
+            ) { viewing = null }
         }
     }
     if (confirmDiscard) {
