@@ -12,6 +12,7 @@ import com.example.remind.RemindApp
 import com.example.remind.data.AttachmentType
 import com.example.remind.data.DraftAttachment
 import com.example.remind.tr
+import com.example.remind.ui.RichNotes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -171,7 +172,7 @@ object InboxSync {
 
     // --- the sync itself ------------------------------------------------------------------------
 
-    private data class RemoteAttachment(val id: String, val kind: String, val extension: String)
+    private data class RemoteAttachment(val id: String, val kind: String, val extension: String, val name: String)
 
     private data class RemoteEntry(
         val id: String,
@@ -258,26 +259,35 @@ object InboxSync {
                 .getOrDefault(System.currentTimeMillis()),
             attachments = (0 until attachments.length()).map {
                 val a = attachments.getJSONObject(it)
-                RemoteAttachment(a.getString("id"), a.getString("kind"), a.optString("extension"))
+                RemoteAttachment(a.getString("id"), a.getString("kind"), a.optString("extension"), a.optString("name"))
             },
         )
     }
 
     private fun titleFor(entry: RemoteEntry): String = entry.title.ifEmpty {
-        entry.body.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() }?.take(80)
+        RichNotes.plain(entry.body).lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() }?.take(80)
+            ?: entry.attachments.firstOrNull { it.kind == "document" && it.name.isNotBlank() }
+                ?.name?.substringBeforeLast('.')?.take(80)
             ?: entry.subject.ifEmpty { tr("Web se note", "Web clip") }
     }
 
+    /** The extension sends rich-text HTML; the source link goes on as its own paragraph. */
     private fun bodyFor(entry: RemoteEntry): String {
-        if (entry.sourceUrl.isEmpty() || entry.body.contains(entry.sourceUrl)) return entry.body
-        return if (entry.body.isBlank()) entry.sourceUrl else "${entry.body.trimEnd()}\n\n${entry.sourceUrl}"
+        val body = entry.body
+        if (entry.sourceUrl.isEmpty() || body.contains(entry.sourceUrl)) return body
+        if (RichNotes.isHtml(body)) return body + "<p>${escapeHtml(entry.sourceUrl)}</p>"
+        return if (body.isBlank()) entry.sourceUrl else "${body.trimEnd()}\n\n${entry.sourceUrl}"
     }
+
+    private fun escapeHtml(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     private fun typeFor(kind: String) = when (kind) {
         "handwriting" -> AttachmentType.HANDWRITING
         "audio" -> AttachmentType.AUDIO
         "video" -> AttachmentType.VIDEO
-        else -> AttachmentType.PHOTO
+        "photo" -> AttachmentType.PHOTO
+        // "document", or a kind a newer server adds: open it in another app.
+        else -> AttachmentType.DOCUMENT
     }
 
     /** Downloads one attachment into the app's attachment store. Photos get the same compression as gallery picks. */
@@ -292,7 +302,12 @@ object InboxSync {
             if (type == AttachmentType.PHOTO) {
                 store.importImage(Uri.fromFile(tmp))?.let { return DraftAttachment(it, type) }
             }
-            val target = store.newFile(ext)
+            val target = if (type == AttachmentType.DOCUMENT) {
+                val name = attachment.name.ifBlank { "document.$ext" }
+                store.newNamedFile(if (name.contains('.')) name else "$name.$ext")
+            } else {
+                store.newFile(ext)
+            }
             tmp.copyTo(target, overwrite = true)
             return DraftAttachment(target.name, type)
         } finally {

@@ -26,7 +26,8 @@ data class Note(
     val remoteId: String? = null,
 )
 
-enum class AttachmentType { PHOTO, HANDWRITING, AUDIO, VIDEO }
+/** DOCUMENT is any other file (PDF, Word, PowerPoint…), opened in another app. */
+enum class AttachmentType { PHOTO, HANDWRITING, AUDIO, VIDEO, DOCUMENT }
 
 @Entity(
     tableName = "attachments",

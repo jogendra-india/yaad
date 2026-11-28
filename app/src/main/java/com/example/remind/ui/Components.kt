@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -130,6 +131,7 @@ fun AttachmentThumb(
                 Icon(Icons.Default.Mic, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Text("Voice", style = MaterialTheme.typography.labelSmall)
             }
+            AttachmentType.DOCUMENT -> DocumentThumbContent(file)
         }
         if (type == AttachmentType.VIDEO) {
             Icon(
@@ -154,12 +156,20 @@ fun AttachmentThumb(
     }
 }
 
-/** Read-only view of a note's attachments: visual ones in a row, voice notes as players. */
+/** Attachment types shown in the swipeable full-screen viewer. */
+fun AttachmentType.isVisual() = this == AttachmentType.PHOTO || this == AttachmentType.HANDWRITING || this == AttachmentType.VIDEO
+
+/**
+ * Read-only view of a note's attachments: visual ones in a row (tap for full screen), voice notes
+ * as players, documents as rows that open in another app. Every one can be saved to the phone.
+ */
 @Composable
 fun AttachmentGallery(items: List<Pair<File, AttachmentType>>, modifier: Modifier = Modifier) {
     var viewing by remember { mutableStateOf<Pair<File, AttachmentType>?>(null) }
-    val visual = items.filter { it.second != AttachmentType.AUDIO }
+    val visual = items.filter { it.second.isVisual() }
     val audio = items.filter { it.second == AttachmentType.AUDIO }
+    val documents = items.filter { it.second == AttachmentType.DOCUMENT }
+    val saveToPhone = rememberSaveToPhone()
 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (visual.isNotEmpty()) {
@@ -169,7 +179,8 @@ fun AttachmentGallery(items: List<Pair<File, AttachmentType>>, modifier: Modifie
                 }
             }
         }
-        audio.forEach { AudioPlayer(it.first) }
+        audio.forEach { AudioPlayer(it.first, onSave = saveToPhone) }
+        documents.forEach { DocumentRow(it.first, onSave = saveToPhone) }
     }
 
     viewing?.let { item ->
@@ -178,7 +189,7 @@ fun AttachmentGallery(items: List<Pair<File, AttachmentType>>, modifier: Modifie
 }
 
 @Composable
-fun AudioPlayer(file: File) {
+fun AudioPlayer(file: File, onSave: ((File) -> Unit)? = null) {
     val player = remember(file) { MediaPlayer() }
     var prepared by remember(file) { mutableStateOf(false) }
     var playing by remember(file) { mutableStateOf(false) }
@@ -237,7 +248,13 @@ fun AudioPlayer(file: File) {
                 maxLines = 1,
                 overflow = TextOverflow.Visible,
             )
-            Spacer(Modifier.width(8.dp))
+            if (onSave != null) {
+                IconButton(onClick = { onSave(file) }) {
+                    Icon(Icons.Default.Download, contentDescription = tr("Phone me save karo", "Save to phone"))
+                }
+            } else {
+                Spacer(Modifier.width(8.dp))
+            }
         }
     }
 }
@@ -259,6 +276,7 @@ fun MediaViewerDialog(items: List<Pair<File, AttachmentType>>, startIndex: Int, 
     val pagerState = rememberPagerState(initialPage = startIndex.coerceIn(0, items.lastIndex)) { items.size }
     val scope = rememberCoroutineScope()
     var zoomed by remember { mutableStateOf(false) }
+    val saveToPhone = rememberSaveToPhone()
 
     FullScreenDialog(onDismiss) {
         HorizontalPager(
@@ -290,6 +308,16 @@ fun MediaViewerDialog(items: List<Pair<File, AttachmentType>>, startIndex: Int, 
                     }
                 }
             }
+        }
+
+        IconButton(
+            onClick = { saveToPhone(items[pagerState.currentPage].first) },
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(12.dp)
+                .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+        ) {
+            Icon(Icons.Default.Download, contentDescription = tr("Phone me save karo", "Save to phone"), tint = Color.White)
         }
 
         if (items.size > 1) {

@@ -4,21 +4,32 @@
 const $ = (id) => document.getElementById(id);
 const fields = {
   title: $("title"),
-  body: $("body"),
   subject: $("subject"),
   keywords: $("keywords"),
   source: $("source"),
 };
+const editor = $("body"); // rich text, see editor.js
+RichEditor.init(editor);
 const statusEl = $("status");
 const recordStatus = $("record-status");
 const progress = $("progress");
 const saveButton = $("save");
 
 const SUBJECT_HISTORY_MAX = 50;
+// Documents the server accepts (by extension); they open in another app on the phone.
+const DOCUMENT_EXTENSIONS = [
+  "pdf", "doc", "docx", "ppt", "pptx", "pps", "ppsx", "xls", "xlsx",
+  "csv", "txt", "md", "rtf", "odt", "ods", "odp", "epub",
+];
 const EXTENSION_KINDS = {
   jpg: "photo", jpeg: "photo", png: "photo", gif: "photo", webp: "photo", bmp: "photo", heic: "photo",
   mp4: "video", mov: "video", webm: "video", mkv: "video", "3gp": "video",
   mp3: "audio", m4a: "audio", aac: "audio", ogg: "audio", wav: "audio", flac: "audio", opus: "audio",
+  ...Object.fromEntries(DOCUMENT_EXTENSIONS.map((ext) => [ext, "document"])),
+};
+const extensionOf = (name) => {
+  const parts = (name || "").split(".");
+  return parts.length > 1 ? parts.pop().toLowerCase() : "";
 };
 // Files copied from the file manager sometimes arrive without a type; the
 // server checks it, so fill it in from the extension.
@@ -29,7 +40,7 @@ const EXTENSION_MIME = {
   mp3: "audio/mpeg", m4a: "audio/mp4", aac: "audio/aac", ogg: "audio/ogg", wav: "audio/wav",
   flac: "audio/flac", opus: "audio/ogg",
 };
-const KIND_ICON = { audio: "🎤", video: "🎬" };
+const KIND_ICON = { audio: "🎤", video: "🎬", document: "📄" };
 
 let settings = { serverUrl: "", inboxKey: "" };
 let items = []; // { id, file, kind, previewUrl }
@@ -66,6 +77,7 @@ async function rememberSubject(subject) {
 // Text survives the panel being closed; attachments do not.
 function saveDraft() {
   const draft = Object.fromEntries(Object.entries(fields).map(([k, el]) => [k, el.value]));
+  draft.body = editor.innerHTML;
   chrome.storage.session.set({ draft });
 }
 
@@ -73,9 +85,11 @@ async function restoreDraft() {
   const { draft } = await chrome.storage.session.get("draft");
   if (!draft) return;
   for (const [k, el] of Object.entries(fields)) if (draft[k]) el.value = draft[k];
+  if (draft.body) RichEditor.setHtml(editor, draft.body);
 }
 
 Object.values(fields).forEach((el) => el.addEventListener("input", saveDraft));
+editor.addEventListener("input", saveDraft);
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && (changes.serverUrl || changes.inboxKey)) refreshSettings();
@@ -85,22 +99,27 @@ chrome.storage.onChanged.addListener((changes, area) => {
 // --- attachments --------------------------------------------------------------
 
 function kindFor(file) {
+  const ext = extensionOf(file.name);
+  if (DOCUMENT_EXTENSIONS.includes(ext)) return "document";
   const type = (file.type || "").toLowerCase();
   if (type.startsWith("image/")) return "photo";
   if (type.startsWith("video/")) return "video";
   if (type.startsWith("audio/")) return "audio";
-  const ext = (file.name || "").split(".").pop().toLowerCase();
   return EXTENSION_KINDS[ext] || null;
 }
 
 function addFile(file, kind) {
   if (!file.type) {
-    const mime = EXTENSION_MIME[(file.name || "").split(".").pop().toLowerCase()];
+    const mime = EXTENSION_MIME[extensionOf(file.name)];
     if (mime) file = new File([file], file.name, { type: mime, lastModified: file.lastModified });
   }
   kind = kind || kindFor(file);
   if (!kind) {
-    setStatus(statusEl, `"${file.name}" is not an image, audio or video file.`, "error");
+    setStatus(
+      statusEl,
+      `"${file.name}" can't be attached. Use an image, audio, video or a document (${DOCUMENT_EXTENSIONS.join(", ")}).`,
+      "error"
+    );
     return false;
   }
   items.push({ id: nextId++, file, kind, previewUrl: URL.createObjectURL(file) });
@@ -126,13 +145,20 @@ function render() {
         preview = Object.assign(document.createElement("img"), { src: item.previewUrl, alt: item.file.name });
       } else if (item.kind === "video") {
         preview = Object.assign(document.createElement("video"), { src: item.previewUrl, muted: true, preload: "metadata" });
+      } else if (item.kind === "document") {
+        preview = document.createElement("div");
+        preview.className = "audio doc";
+        preview.append(
+          Object.assign(document.createElement("span"), { textContent: KIND_ICON.document }),
+          Object.assign(document.createElement("span"), { className: "doc-name", textContent: item.file.name, title: item.file.name })
+        );
       } else {
         preview = Object.assign(document.createElement("div"), { className: "audio", textContent: KIND_ICON.audio });
       }
       const meta = document.createElement("div");
       meta.className = "meta";
       meta.append(
-        Object.assign(document.createElement("span"), { textContent: item.kind }),
+        Object.assign(document.createElement("span"), { textContent: item.kind === "document" ? extensionOf(item.file.name).toUpperCase() : item.kind }),
         Object.assign(document.createElement("span"), { textContent: formatBytes(item.file.size) })
       );
       const remove = Object.assign(document.createElement("button"), {
@@ -203,7 +229,7 @@ async function takePendingClip() {
   if (!clip) return;
   await chrome.storage.session.remove("pendingClip");
   if (clip.text) {
-    fields.body.value = fields.body.value ? fields.body.value.trimEnd() + "\n\n" + clip.text : clip.text;
+    RichEditor.appendText(editor, clip.text);
   }
   if (!fields.title.value && clip.title && !clip.imageUrl) fields.title.value = clip.title.slice(0, 300);
   if (!fields.source.value && /^https?:/i.test(clip.sourceUrl)) fields.source.value = clip.sourceUrl;
@@ -374,6 +400,7 @@ window.addEventListener("resize", () => {
 
 function clearForm() {
   Object.values(fields).forEach((el) => (el.value = ""));
+  RichEditor.clear(editor);
   items.forEach((i) => URL.revokeObjectURL(i.previewUrl));
   items = [];
   render();
@@ -401,7 +428,7 @@ function errorText(xhr) {
 function upload() {
   const form = new FormData();
   form.append("title", fields.title.value.trim());
-  form.append("body", fields.body.value);
+  form.append("body", RichEditor.isEmpty(editor) ? "" : RichEditor.getHtml(editor));
   form.append("subject", fields.subject.value.trim());
   fields.keywords.value
     .split(",")
@@ -446,7 +473,7 @@ saveButton.addEventListener("click", () => {
     setStatus(statusEl, "Set the server URL and key in Settings first.", "error");
     return;
   }
-  if (!fields.title.value.trim() && !fields.body.value.trim() && !items.length) {
+  if (!fields.title.value.trim() && RichEditor.isEmpty(editor) && !items.length) {
     setStatus(statusEl, "Add a title, some text or an attachment.", "error");
     return;
   }

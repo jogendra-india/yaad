@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
 import java.io.File
@@ -55,6 +56,26 @@ class AttachmentStore(private val context: Context) {
         return out.name
     }
 
+    /**
+     * A new file that keeps a readable name: `<uuid>~Notes.pdf`. Documents need their original
+     * name to be shown and saved back out; the prefix keeps every file name unique.
+     */
+    fun newNamedFile(originalName: String): File = File(dir, "${UUID.randomUUID()}$NAME_SEPARATOR${safeName(originalName)}")
+
+    /** Copies a picked document into the store under its own name. Returns the new file name. */
+    fun importDocument(uri: Uri): String? {
+        val resolver = context.contentResolver
+        val name = runCatching {
+            resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                if (c.moveToFirst()) c.getString(0) else null
+            }
+        }.getOrNull() ?: uri.lastPathSegment ?: "document"
+        val out = newNamedFile(name)
+        val input = resolver.openInputStream(uri) ?: return null
+        input.use { src -> out.outputStream().use { src.copyTo(it) } }
+        return out.name
+    }
+
     fun saveBitmap(bitmap: Bitmap): String {
         val out = newFile("png")
         out.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
@@ -93,8 +114,24 @@ class AttachmentStore(private val context: Context) {
         }
     }.getOrNull()
 
-    private companion object {
-        const val MAX_SIDE = 1600
-        const val JPEG_QUALITY = 85
+    companion object {
+        private const val MAX_SIDE = 1600
+        private const val JPEG_QUALITY = 85
+        private const val NAME_SEPARATOR = "~"
+        private const val MAX_NAME_LENGTH = 120
+        private val UNSAFE = Regex("[\\\\/:*?\"<>|\\x00-\\x1f]")
+
+        /** The name to show and save as: the original name for documents, else the stored name. */
+        fun displayName(fileName: String): String = fileName.substringAfter(NAME_SEPARATOR, fileName)
+
+        /** Strips path and reserved characters, keeping the extension when the name is shortened. */
+        fun safeName(raw: String): String {
+            val cleaned = raw.substringAfterLast('/').substringAfterLast('\\').replace(UNSAFE, "_").trim().trim('.')
+            if (cleaned.isEmpty()) return "document"
+            if (cleaned.length <= MAX_NAME_LENGTH) return cleaned
+            val ext = cleaned.substringAfterLast('.', "").take(10)
+            val stem = cleaned.substringBeforeLast('.').take(MAX_NAME_LENGTH - ext.length - 1)
+            return if (ext.isEmpty()) cleaned.take(MAX_NAME_LENGTH) else "$stem.$ext"
+        }
     }
 }

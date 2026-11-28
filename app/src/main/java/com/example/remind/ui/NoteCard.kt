@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Videocam
@@ -56,9 +57,10 @@ fun NoteCard(
     modifier: Modifier = Modifier,
 ) {
     val note = item.note
-    val visual = item.attachments.firstOrNull { it.type != AttachmentType.AUDIO }
+    val visual = item.attachments.firstOrNull { it.type.isVisual() }
     val hasAudio = item.attachments.any { it.type == AttachmentType.AUDIO }
     val hasVideo = item.attachments.any { it.type == AttachmentType.VIDEO }
+    val hasDocument = item.attachments.any { it.type == AttachmentType.DOCUMENT }
 
     Card(
         onClick = onClick,
@@ -135,6 +137,7 @@ fun NoteCard(
                 if (note.mastered) SmallIcon(Icons.Default.CheckCircle, MaterialTheme.colorScheme.tertiary)
                 if (hasAudio) SmallIcon(Icons.Default.Mic)
                 if (hasVideo) SmallIcon(Icons.Default.Videocam)
+                if (hasDocument) SmallIcon(Icons.Default.Description)
                 if (item.attachments.isEmpty() && note.body.isNotBlank()) SmallIcon(Icons.AutoMirrored.Filled.Notes)
             }
         }

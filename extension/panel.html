@@ -15,8 +15,16 @@
   <label for="title">Title</label>
   <input id="title" type="text" maxlength="300" autocomplete="off">
 
-  <label for="body">Body</label>
-  <textarea id="body" placeholder="Type or paste. Ctrl+V an image or a copied file to attach it."></textarea>
+  <label id="body-label">Body</label>
+  <div class="editor-toolbar" role="toolbar" aria-label="Formatting">
+    <button type="button" class="ghost fmt" data-cmd="bold" title="Bold (Ctrl+B)" aria-label="Bold"><b>B</b></button>
+    <button type="button" class="ghost fmt" data-cmd="italic" title="Italic (Ctrl+I)" aria-label="Italic"><i>I</i></button>
+    <button type="button" class="ghost fmt" data-cmd="underline" title="Underline (Ctrl+U)" aria-label="Underline"><u>U</u></button>
+    <button type="button" class="ghost fmt" data-cmd="insertUnorderedList" title="Bullet list (type - then space)" aria-label="Bullet list">• List</button>
+    <button type="button" class="ghost fmt" data-cmd="insertOrderedList" title="Numbered list (type 1. then space)" aria-label="Numbered list">1. List</button>
+  </div>
+  <div id="body" class="editor" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="body-label"
+       data-placeholder="Type or paste. Ctrl+V an image or a copied file to attach it."></div>
 
   <label for="subject">Subject</label>
   <input id="subject" type="text" maxlength="120" list="subjects" autocomplete="off" placeholder="Optional">
@@ -35,7 +43,7 @@
       <button type="button" class="ghost" id="draw">Draw</button>
       <button type="button" class="ghost" id="record">Record voice</button>
     </div>
-    <input id="file-input" type="file" accept="image/*,audio/*,video/*" multiple hidden>
+    <input id="file-input" type="file" accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.pps,.ppsx,.xls,.xlsx,.csv,.txt,.md,.rtf,.odt,.ods,.odp,.epub" multiple hidden>
   </div>
   <p id="record-status" class="status" role="status"></p>
 
@@ -70,6 +78,7 @@
   </div>
 
   <script src="common.js"></script>
+  <script src="editor.js"></script>
   <script src="panel.js"></script>
 </body>
 </html>

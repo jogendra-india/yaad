@@ -61,6 +61,7 @@ import androidx.compose.material.icons.filled.Draw
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -99,6 +100,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.remind.RemindApp
 import com.example.remind.data.Attachment
+import com.example.remind.data.AttachmentStore
 import com.example.remind.data.AttachmentType
 import com.example.remind.data.DraftAttachment
 import com.example.remind.data.Note
@@ -182,7 +184,11 @@ class EditNoteViewModel(private val repo: Repository, state: SavedStateHandle) :
         RichNotes.plain(body).lineSequence().map { it.trim() }
             .firstOrNull { it.isNotEmpty() }?.let { return it.take(60) }
         if (keywords.isNotEmpty()) return keywords.take(3).joinToString(", ")
+        attachments.firstOrNull { it.type == AttachmentType.DOCUMENT }?.let {
+            return AttachmentStore.displayName(it.fileName).substringBeforeLast('.').take(60)
+        }
         val kind = when (attachments.firstOrNull()?.type) {
+            AttachmentType.DOCUMENT -> "Document"
             AttachmentType.PHOTO -> "Photo"
             AttachmentType.HANDWRITING -> tr("Likha hua", "Handwriting")
             AttachmentType.AUDIO -> "Voice"
@@ -279,6 +285,19 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
                     vm.addAttachment(name, if (isVideo) AttachmentType.VIDEO else AttachmentType.PHOTO)
                 } else {
                     Toast.makeText(context, "File import nahi hui", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    val pickDocuments = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
+        scope.launch {
+            uris.forEach { uri ->
+                val name = withContext(Dispatchers.IO) { runCatching { store.importDocument(uri) }.getOrNull() }
+                if (name != null) {
+                    vm.addAttachment(name, AttachmentType.DOCUMENT)
+                } else {
+                    Toast.makeText(context, tr("File import nahi hui", "Couldn't add the file"), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -391,6 +410,17 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
                     label = { Text("Video") },
                     leadingIcon = { Icon(Icons.Default.Videocam, null) },
                 )
+                AssistChip(
+                    onClick = {
+                        try {
+                            pickDocuments.launch(arrayOf("*/*"))
+                        } catch (e: ActivityNotFoundException) {
+                            Toast.makeText(context, tr("File picker nahi mila", "No file picker found"), Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    label = { Text("Document") },
+                    leadingIcon = { Icon(Icons.Default.Description, null) },
+                )
             }
             if (vm.attachments.isNotEmpty()) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -448,6 +478,11 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
         val item = vm.attachments.firstOrNull { it.fileName == name }
         if (item == null) {
             LaunchedEffect(name) { viewing = null }
+        } else if (item.type == AttachmentType.DOCUMENT) {
+            LaunchedEffect(name) {
+                openExternally(context, store.file(name))
+                viewing = null
+            }
         } else if (item.type == AttachmentType.AUDIO) {
             AlertDialog(
                 onDismissRequest = { viewing = null },
@@ -456,7 +491,7 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
                 confirmButton = { TextButton(onClick = { viewing = null }) { Text("Close") } },
             )
         } else {
-            val visual = vm.attachments.filter { it.type != AttachmentType.AUDIO }
+            val visual = vm.attachments.filter { it.type.isVisual() }
             MediaViewerDialog(
                 items = visual.map { store.file(it.fileName) to it.type },
                 startIndex = visual.indexOfFirst { it.fileName == name },

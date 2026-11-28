@@ -6,7 +6,7 @@
 
 ## Features
 
-- **Rich notes**: title, deck (subject), keywords, short text, plus camera/gallery photos, a handwriting pad, voice recordings and videos.
+- **Rich notes**: title, deck (subject), keywords, formatted text, plus camera/gallery photos, a handwriting pad, voice recordings, videos and documents (PDF, Word, PowerPoint and more, opened in the app that handles them). Any attachment can be saved back to the phone.
 - **Spaced repetition**: each review is rated *Bhool gaya* (forgot), *Thoda* (partly) or *Yaad tha* (remembered). Forgot restarts the schedule, partly repeats the current gap, remembered moves to the next one. Each rating button shows when the note will come back.
 - **Active recall**: only the title is shown first; tap to reveal keywords, notes and attachments.
 - **Daily digests**: any number of reminder times per day, each with its own toggle, plus a master switch. Notifications have *Revise* and *Snooze 1h* actions and survive reboots.
@@ -14,7 +14,7 @@
 - **Custom schedules**: set a default interval list and override it per note.
 - **Backup**: export or import everything (notes, media, history, settings) as a single `.zip`.
 - **Day / Night / System theme**, optional Material You colours, and animated transitions.
-- **Inbox sync (optional)**: send notes, screenshots, drawings, voice and video from Chrome with the [browser extension](extension/), then tap **Sync** in the app to pull them in. Needs your own server (see [Sync](#sync)).
+- **Inbox sync (optional)**: send notes, screenshots, drawings, voice, video and documents from Chrome with the [browser extension](extension/), then tap **Sync** in the app to pull them in. Needs your own server (see [Sync](#sync)).
 - **Offline first**: no account. The app only goes online when you tap *Check for update* or *Sync*.
 
 ## Sync
@@ -31,7 +31,7 @@ The server API is five endpoints, all authenticated with the `X-Yaad-Key` header
 | Method | Path | Used by |
 |---|---|---|
 | `GET` | `/ping/` | both, to test the URL and key |
-| `POST` | `/entries/` | extension: multipart `title`, `body`, `subject`, `keywords[]`, `source_url`, `files[]`, `kinds[]` (`photo`, `handwriting`, `audio`, `video`) |
+| `POST` | `/entries/` | extension: multipart `title`, `body`, `subject`, `keywords[]`, `source_url`, `files[]`, `kinds[]` (`photo`, `handwriting`, `audio`, `video`, `document`) |
 | `GET` | `/entries/?limit=&offset=` | app: waiting entries, oldest first |
 | `GET` | `/attachments/<id>/` | app: one file |
 | `POST` | `/entries/ack/` | app: `{"ids": [...]}` once saved; the server deletes them |
