@@ -13,7 +13,7 @@ Capture notes in Chrome and send them to your Yaad inbox. Nothing syncs on its o
 
 Click the toolbar icon to open the side panel, or right-click a selection, image, link or page and choose **Add to Yaad**.
 
-- **Title, Body, Subject, Keywords, Source link.** Subject suggests the ones you used before. The source link is the page the note came from (filled in by right-click → Add to Yaad); the app adds it at the end of the note. Leave it empty if you don't need it.
+- **Title, Body, Deck, Keywords, Source link.** Deck is the same as in the app and suggests the ones you used before. The source link is the page the note came from (filled in by right-click → Add to Yaad); the app adds it at the end of the note. Leave it empty if you don't need it.
 - **Body formatting**, the same as the app: **B** / *I* / U (or Ctrl+B / Ctrl+I / Ctrl+U), bullet and numbered lists. Typing `- ` or `1. ` at the start of a line starts a list. Pasted text keeps bold, italic, underline and lists.
 - **Attachments**, the same kinds the app has:
   - **Photo**: press Ctrl+V with a screenshot or copied image, drop an image, or use **Add file**.
