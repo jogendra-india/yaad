@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.remind.data.AttachmentStore
+import com.example.remind.tr
 import com.example.remind.data.AttachmentType
 import com.example.remind.data.NoteWithAttachments
 
@@ -55,6 +56,7 @@ fun NoteCard(
     store: AttachmentStore,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showCreated: Boolean = false,
 ) {
     val note = item.note
     val visual = item.attachments.firstOrNull { it.type.isVisual() }
@@ -123,6 +125,14 @@ fun NoteCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                if (showCreated) {
+                    Text(
+                        createdLabel(note.createdAt),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
                 if (note.keywords.isNotEmpty()) {
                     Text(
                         note.keywords.joinToString(" · "),
@@ -142,6 +152,14 @@ fun NoteCard(
             }
         }
     }
+}
+
+private val createdFormat = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a")
+
+/** "Added 28 Nov 2026, 3:45 PM" in the phone's time zone. */
+private fun createdLabel(millis: Long): String {
+    val time = java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneId.systemDefault())
+    return tr("Banaya ", "Added ") + createdFormat.format(time)
 }
 
 @Composable

@@ -82,6 +82,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.remind.RemindApp
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.ui.platform.LocalContext
+import com.example.remind.sync.InboxSync
 import com.example.remind.data.DeckSummary
 import com.example.remind.data.NoteWithAttachments
 import com.example.remind.data.Repository
@@ -175,9 +182,10 @@ fun HomeScreen(
         },
     ) { padding ->
         if (!state.loaded) return@Scaffold
+        PullToSync(topPadding = padding.calculateTopPadding()) {
         if (state.isEmpty) {
-            EmptyHome(Modifier.padding(padding))
-            return@Scaffold
+            EmptyHome(Modifier.padding(padding).verticalScroll(rememberScrollState()))
+            return@PullToSync
         }
         LazyColumn(
             state = listState,
@@ -249,7 +257,38 @@ fun HomeScreen(
                 }
             }
         }
+        }
     }
+}
+
+/**
+ * Pull down and let go to run the inbox sync, like the Sync button. Without a
+ * sync server set up, the content is shown as it is and pulling does nothing.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PullToSync(topPadding: androidx.compose.ui.unit.Dp, content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    val app = context.applicationContext as RemindApp
+    val configured = remember(InboxSync.lastSyncAt, InboxSync.state) { InboxSync.config(context).isComplete }
+    if (!configured) {
+        content()
+        return
+    }
+    val pullState = rememberPullToRefreshState()
+    PullToRefreshBox(
+        isRefreshing = InboxSync.isRunning,
+        onRefresh = { InboxSync.start(app) },
+        state = pullState,
+        modifier = Modifier.fillMaxSize(),
+        indicator = {
+            PullToRefreshDefaults.Indicator(
+                state = pullState,
+                isRefreshing = InboxSync.isRunning,
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = topPadding),
+            )
+        },
+    ) { content() }
 }
 
 @Composable

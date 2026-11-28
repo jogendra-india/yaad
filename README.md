@@ -10,16 +10,16 @@
 - **Spaced repetition**: each review is rated *Bhool gaya* (forgot), *Thoda* (partly) or *Yaad tha* (remembered). Forgot restarts the schedule, partly repeats the current gap, remembered moves to the next one. Each rating button shows when the note will come back.
 - **Active recall**: only the title is shown first; tap to reveal keywords, notes and attachments.
 - **Daily digests**: any number of reminder times per day, each with its own toggle, plus a master switch. Notifications have *Revise* and *Snooze 1h* actions and survive reboots.
-- **Decks and stars**: browse notes by deck, star important ones, search across titles, keywords and notes, and run a practice session over any deck without touching its schedule.
+- **Decks and stars**: browse notes by deck (each note shows when it was added), star important ones, search across titles, keywords and notes, and run a practice session over any deck without touching its schedule.
 - **Custom schedules**: set a default interval list and override it per note.
 - **Backup**: export or import everything (notes, media, history, settings) as a single `.zip`.
 - **Day / Night / System theme**, optional Material You colours, and animated transitions.
-- **Inbox sync (optional)**: send notes, screenshots, drawings, voice, video and documents from Chrome with the [browser extension](extension/), then tap **Sync** in the app to pull them in. Needs your own server (see [Sync](#sync)).
+- **Inbox sync (optional)**: send notes, screenshots, drawings, voice, video and documents from Chrome with the [browser extension](extension/), then pull down on Home (or tap **Sync**) to bring them in. Needs your own server (see [Sync](#sync)).
 - **Offline first**: no account. The app only goes online when you tap *Check for update* or *Sync*.
 
 ## Sync
 
-Sync is one way and manual: the browser extension adds notes to an inbox on your server, and the app pulls them in only when you tap **Sync** (Home top bar, or Settings → Sync). A note is deleted from the server only after the phone has saved it, files included, so an interrupted sync never loses anything; the next tap picks up where it stopped.
+Sync is one way and manual: the browser extension adds notes to an inbox on your server, and the app pulls them in only when you pull down on Home or tap **Sync** (Home top bar, or Settings → Sync). A note is deleted from the server only after the phone has saved it, files included, so an interrupted sync never loses anything; the next tap picks up where it stopped.
 
 Set the same two values in the app (Settings → Sync) and in the extension (its Settings page):
 

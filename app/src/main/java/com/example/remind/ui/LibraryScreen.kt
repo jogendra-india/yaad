@@ -240,7 +240,7 @@ fun LibraryScreen(
                         )
                     }
                     items(state.notes, key = { it.note.id }) { item ->
-                        NoteCard(item, state.today, vm.repo.store, onClick = { onOpenNote(item.note.id) }, modifier = Modifier.animateItem())
+                        NoteCard(item, state.today, vm.repo.store, onClick = { onOpenNote(item.note.id) }, modifier = Modifier.animateItem(), showCreated = true)
                     }
                 }
             }
