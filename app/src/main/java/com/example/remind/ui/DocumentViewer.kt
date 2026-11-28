@@ -12,6 +12,17 @@ import android.os.ParcelFileDescriptor
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.imePadding
+import android.widget.Toast
+import android.graphics.Rect
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -37,6 +48,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Draw
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -50,6 +63,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -96,6 +111,46 @@ fun canViewInApp(file: File) = isPdf(file) || isMarkdown(file) || isPlainText(fi
 fun DocumentViewerDialog(file: File, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val saveToPhone = rememberSaveToPhone()
+    val scope = rememberCoroutineScope()
+    // Bumped after an edit so the text views read the file again.
+    var version by remember(file) { mutableIntStateOf(0) }
+    var editing by remember(file) { mutableStateOf(false) }
+    var annotating by remember(file) { mutableStateOf(false) }
+    var exporting by remember(file) { mutableStateOf(false) }
+    var pdfPage by remember(file) { mutableIntStateOf(0) }
+    var ink by remember(file) { mutableStateOf(if (isPdf(file)) PdfInk.load(file) else emptyMap()) }
+
+    /** The file to hand out: for an annotated PDF, a copy with the strokes drawn in. */
+    fun export(action: (File) -> Unit) {
+        if (!isPdf(file) || ink.isEmpty()) {
+            action(file)
+            return
+        }
+        exporting = true
+        scope.launch {
+            val out = runCatching { flattenPdf(context, file, ink) }.getOrNull()
+            exporting = false
+            action(out ?: file)
+        }
+    }
+
+    if (editing) {
+        TextEditDialog(file, onDismiss = { editing = false }, onSaved = { version++ })
+    }
+    if (annotating) {
+        PdfPageAnnotateDialog(
+            file = file,
+            page = pdfPage,
+            initial = ink[pdfPage].orEmpty(),
+            onDismiss = { annotating = false },
+            onSaved = { lines ->
+                val updated = ink.toMutableMap().apply { if (lines.isEmpty()) remove(pdfPage) else put(pdfPage, lines) }
+                PdfInk.save(file, updated)
+                ink = updated
+            },
+        )
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -117,18 +172,31 @@ fun DocumentViewerDialog(file: File, onDismiss: () -> Unit) {
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    IconButton(onClick = { openExternally(context, file) }) {
-                        Icon(Icons.Default.OpenInNew, contentDescription = tr("Dusre app me kholo", "Open in another app"))
+                    if (isPdf(file)) {
+                        IconButton(onClick = { annotating = true }) {
+                            Icon(Icons.Default.Draw, contentDescription = tr("Is page pe likho", "Annotate this page"))
+                        }
+                    } else {
+                        IconButton(onClick = { editing = true }) {
+                            Icon(Icons.Default.Edit, contentDescription = tr("Edit karo", "Edit"))
+                        }
                     }
-                    IconButton(onClick = { saveToPhone(file) }) {
-                        Icon(Icons.Default.Download, contentDescription = tr("Phone me save karo", "Save to phone"))
+                    if (exporting) {
+                        CircularProgressIndicator(Modifier.padding(12.dp).size(22.dp), strokeWidth = 2.dp)
+                    } else {
+                        IconButton(onClick = { export { openExternally(context, it) } }) {
+                            Icon(Icons.Default.OpenInNew, contentDescription = tr("Dusre app me kholo", "Open in another app"))
+                        }
+                        IconButton(onClick = { export(saveToPhone) }) {
+                            Icon(Icons.Default.Download, contentDescription = tr("Phone me save karo", "Save to phone"))
+                        }
                     }
                 }
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     when {
-                        isPdf(file) -> PdfPages(file)
-                        isHtml(file) -> HtmlView(file)
-                        else -> MarkdownView(file)
+                        isPdf(file) -> PdfPages(file, ink, onPageChange = { pdfPage = it })
+                        isHtml(file) -> HtmlView(file, version)
+                        else -> MarkdownView(file, version)
                     }
                 }
             }
@@ -161,11 +229,11 @@ private fun openLink(context: Context, url: String) {
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-private fun MarkdownView(file: File) {
+private fun MarkdownView(file: File, version: Int) {
     val context = LocalContext.current
     val colors = MaterialTheme.colorScheme
     val readingFont = MaterialTheme.typography.bodyLarge.fontFamily == ReadingFont
-    val page by produceState<String?>(null, file, colors, readingFont) {
+    val page by produceState<String?>(null, file, colors, readingFont, version) {
         value = withContext(Dispatchers.IO) {
             val text = runCatching { file.readText() }.getOrElse { "" }
             val marked = context.assets.open("viewer/marked.min.js").bufferedReader().use { it.readText() }
@@ -284,8 +352,8 @@ private fun buildPage(text: String, markdown: Boolean, marked: String, css: Stri
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-private fun HtmlView(file: File) {
-    val html by produceState<String?>(null, file) {
+private fun HtmlView(file: File, version: Int) {
+    val html by produceState<String?>(null, file, version) {
         value = withContext(Dispatchers.IO) { runCatching { file.readText() }.getOrElse { "" } }
     }
     val page = html
@@ -373,7 +441,7 @@ private const val MAX_ZOOM = 4f
  * when zoomed in, scroll sideways as well as up and down. Pages are rendered sharper as you zoom.
  */
 @Composable
-private fun PdfPages(file: File) {
+private fun PdfPages(file: File, ink: Map<Int, List<InkLine>>, onPageChange: (Int) -> Unit) {
     var doc by remember(file) { mutableStateOf<PdfDoc?>(null) }
     var aspects by remember(file) { mutableStateOf<List<Float>?>(null) }
     var failed by remember(file) { mutableStateOf(false) }
@@ -407,6 +475,7 @@ private fun PdfPages(file: File) {
     val listState = rememberLazyListState()
     val hScroll = rememberScrollState()
     val currentPage by remember { derivedStateOf { listState.firstVisibleItemIndex + 1 } }
+    LaunchedEffect(currentPage) { onPageChange(currentPage - 1) }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerLowest)) {
         val density = LocalDensity.current
@@ -463,7 +532,7 @@ private fun PdfPages(file: File) {
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(pages.size) { index ->
-                    PdfPage(pdf, index, pages[index], renderPx)
+                    PdfPage(pdf, index, pages[index], renderPx, ink[index].orEmpty())
                 }
             }
         }
@@ -486,7 +555,7 @@ private fun PdfPages(file: File) {
 }
 
 @Composable
-private fun PdfPage(pdf: PdfDoc, index: Int, aspect: Float, renderPx: Int) {
+private fun PdfPage(pdf: PdfDoc, index: Int, aspect: Float, renderPx: Int, lines: List<InkLine>) {
     // Keeps showing the last bitmap while a sharper one renders.
     var bitmap by remember(pdf, index) { mutableStateOf<Bitmap?>(null) }
     LaunchedEffect(pdf, index, renderPx) {
@@ -510,5 +579,162 @@ private fun PdfPage(pdf: PdfDoc, index: Int, aspect: Float, renderPx: Int) {
         } else {
             CircularProgressIndicator(Modifier.padding(24.dp))
         }
+        if (lines.isNotEmpty()) Canvas(Modifier.fillMaxSize()) { drawInkLines(lines) }
     }
+}
+
+// ---------------------------------------------------------------- Editing
+
+/**
+ * Edit a Markdown, text or HTML file as plain text. Save writes it back in place, so the
+ * note, backups and exports all carry the edited version.
+ */
+@Composable
+private fun TextEditDialog(file: File, onDismiss: () -> Unit, onSaved: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val loaded by produceState<String?>(null, file) {
+        value = withContext(Dispatchers.IO) { runCatching { file.readText() }.getOrElse { "" } }
+    }
+    val original = loaded ?: return
+    var text by remember(original) { mutableStateOf(original) }
+    var saving by remember { mutableStateOf(false) }
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Column(Modifier.fillMaxSize().imePadding()) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = tr("Radd karo", "Cancel")) }
+                    Text(
+                        tr("Edit: ", "Edit: ") + AttachmentStore.displayName(file.name),
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (saving) {
+                        CircularProgressIndicator(Modifier.padding(horizontal = 16.dp).size(22.dp), strokeWidth = 2.dp)
+                    } else {
+                        TextButton(
+                            enabled = text != original,
+                            onClick = {
+                                saving = true
+                                scope.launch {
+                                    val ok = withContext(Dispatchers.IO) { runCatching { file.writeText(text) }.isSuccess }
+                                    saving = false
+                                    if (ok) {
+                                        onSaved()
+                                        onDismiss()
+                                    } else {
+                                        Toast.makeText(context, tr("Save nahi hua", "Couldn't save the file"), Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                        ) { Text(tr("Save karo", "Save")) }
+                    }
+                }
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = MaterialTheme.typography.bodyMedium.fontSize),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp),
+                )
+            }
+        }
+    }
+}
+
+/** Opens one PDF page, rendered sharp, in the annotation editor. */
+@Composable
+private fun PdfPageAnnotateDialog(
+    file: File,
+    page: Int,
+    initial: List<InkLine>,
+    onDismiss: () -> Unit,
+    onSaved: (List<InkLine>) -> Unit,
+) {
+    val widthPx = with(LocalDensity.current) { 2 * androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp.roundToPx() }
+    val bitmap by produceState<Bitmap?>(null, file, page) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
+                    PdfRenderer(fd).use { renderer ->
+                        renderer.openPage(page.coerceIn(0, renderer.pageCount - 1)).use { p ->
+                            val w = widthPx.coerceIn(600, 3000)
+                            val h = (w.toFloat() * p.height / p.width).toInt().coerceAtLeast(1)
+                            Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also {
+                                it.eraseColor(AndroidColor.WHITE)
+                                p.render(it, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                            }
+                        }
+                    }
+                }
+            }.getOrNull()
+        }
+    }
+    val b = bitmap
+    if (b == null) {
+        Dialog(onDismissRequest = onDismiss) { CircularProgressIndicator() }
+        return
+    }
+    val image = remember(b) { b.asImageBitmap() }
+    AnnotateScreen(
+        title = tr("Page ${page + 1} pe likho", "Annotate page ${page + 1}"),
+        background = image,
+        initial = initial,
+        onCancel = onDismiss,
+        onSave = { lines ->
+            onSaved(lines)
+            onDismiss()
+        },
+    )
+}
+
+/**
+ * A copy of [file] with the annotations drawn in, for sharing or saving outside the app.
+ * PdfDocument can only draw, not copy pages, so every page becomes a 2x (144 dpi) image.
+ */
+suspend fun flattenPdf(context: Context, file: File, ink: Map<Int, List<InkLine>>): File = withContext(Dispatchers.IO) {
+    val outDir = File(context.cacheDir, "exports").apply { mkdirs() }
+    val out = File(outDir, AttachmentStore.displayName(file.name))
+    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
+        PdfRenderer(fd).use { renderer ->
+            val doc = PdfDocument()
+            try {
+                val paint = Paint(Paint.FILTER_BITMAP_FLAG)
+                for (i in 0 until renderer.pageCount) {
+                    renderer.openPage(i).use { page ->
+                        val info = PdfDocument.PageInfo.Builder(page.width, page.height, i + 1).create()
+                        val target = doc.startPage(info)
+                        val bmp = Bitmap.createBitmap(page.width * 2, page.height * 2, Bitmap.Config.ARGB_8888)
+                        bmp.eraseColor(AndroidColor.WHITE)
+                        page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                        ink[i]?.let { drawInk(android.graphics.Canvas(bmp), it, bmp.width.toFloat(), bmp.height.toFloat()) }
+                        target.canvas.drawBitmap(bmp, null, Rect(0, 0, page.width, page.height), paint)
+                        doc.finishPage(target)
+                        bmp.recycle()
+                    }
+                }
+                out.outputStream().use { doc.writeTo(it) }
+            } finally {
+                doc.close()
+            }
+        }
+    }
+    out
+}
+
+/** The file to share or save: an annotated PDF is flattened first; everything else as is. */
+suspend fun exportable(context: Context, file: File): File {
+    if (!isPdf(file)) return file
+    val ink = withContext(Dispatchers.IO) { PdfInk.load(file) }
+    if (ink.isEmpty()) return file
+    return runCatching { flattenPdf(context, file, ink) }.getOrDefault(file)
 }

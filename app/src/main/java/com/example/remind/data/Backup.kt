@@ -47,6 +47,13 @@ class Backup(private val context: Context, private val repo: Repository) {
                 zip.putNextEntry(ZipEntry(FILES_PREFIX + attachment.fileName))
                 file.inputStream().use { it.copyTo(zip) }
                 zip.closeEntry()
+                // PDF annotations ride along with their PDF.
+                val ink = store.file(attachment.fileName + AttachmentStore.INK_SUFFIX)
+                if (ink.exists()) {
+                    zip.putNextEntry(ZipEntry(FILES_PREFIX + ink.name))
+                    ink.inputStream().use { it.copyTo(zip) }
+                    zip.closeEntry()
+                }
             }
         }
         return notes.size
@@ -97,7 +104,8 @@ class Backup(private val context: Context, private val repo: Repository) {
         val keep = attachments.map { it.fileName }.toSet()
         oldAttachments.filter { it.fileName !in keep }.forEach { store.delete(it.fileName) }
         staging.listFiles()?.forEach { file ->
-            if (file.name in keep) file.copyTo(store.file(file.name), overwrite = true)
+            val owner = file.name.removeSuffix(AttachmentStore.INK_SUFFIX)
+            if (file.name in keep || (owner != file.name && owner in keep)) file.copyTo(store.file(file.name), overwrite = true)
         }
         staging.deleteRecursively()
 

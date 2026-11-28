@@ -184,6 +184,7 @@ fun openDocument(context: Context, file: File, showInApp: (File) -> Unit) {
 @Composable
 fun DocumentRow(file: File, onSave: (File) -> Unit) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var viewing by remember(file) { mutableStateOf(false) }
     if (viewing) DocumentViewerDialog(file) { viewing = false }
     Surface(
@@ -212,10 +213,11 @@ fun DocumentRow(file: File, onSave: (File) -> Unit) {
                 )
                 Text(formatSize(file.length()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            IconButton(onClick = { openExternally(context, file) }) {
+            // An annotated PDF goes out with its annotations drawn in.
+            IconButton(onClick = { scope.launch { openExternally(context, exportable(context, file)) } }) {
                 Icon(Icons.Default.OpenInNew, contentDescription = tr("Kholo", "Open"))
             }
-            IconButton(onClick = { onSave(file) }) {
+            IconButton(onClick = { scope.launch { onSave(exportable(context, file)) } }) {
                 Icon(Icons.Default.Download, contentDescription = tr("Phone me save karo", "Save to phone"))
             }
         }

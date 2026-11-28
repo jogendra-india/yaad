@@ -50,6 +50,8 @@ import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.Draw
+import androidx.compose.runtime.key
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -118,6 +120,7 @@ fun AttachmentThumb(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
+        key(AttachmentEdits.revision) {
         when (type) {
             AttachmentType.PHOTO, AttachmentType.HANDWRITING, AttachmentType.VIDEO -> AsyncImage(
                 model = file,
@@ -132,6 +135,7 @@ fun AttachmentThumb(
                 Text("Voice", style = MaterialTheme.typography.labelSmall)
             }
             AttachmentType.DOCUMENT -> DocumentThumbContent(file)
+        }
         }
         if (type == AttachmentType.VIDEO) {
             Icon(
@@ -276,7 +280,10 @@ fun MediaViewerDialog(items: List<Pair<File, AttachmentType>>, startIndex: Int, 
     val pagerState = rememberPagerState(initialPage = startIndex.coerceIn(0, items.lastIndex)) { items.size }
     val scope = rememberCoroutineScope()
     var zoomed by remember { mutableStateOf(false) }
+    var annotating by remember { mutableStateOf<File?>(null) }
     val saveToPhone = rememberSaveToPhone()
+
+    annotating?.let { ImageAnnotateDialog(it) { annotating = null } }
 
     FullScreenDialog(onDismiss) {
         HorizontalPager(
@@ -287,6 +294,8 @@ fun MediaViewerDialog(items: List<Pair<File, AttachmentType>>, startIndex: Int, 
         ) { page ->
             val (file, type) = items[page]
             val isCurrent = pagerState.settledPage == page
+            // A drawn-on photo is rewritten in place; the new revision makes it load again.
+            key(AttachmentEdits.revision) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 when {
                     type != AttachmentType.VIDEO -> ZoomableImage(
@@ -308,6 +317,7 @@ fun MediaViewerDialog(items: List<Pair<File, AttachmentType>>, startIndex: Int, 
                     }
                 }
             }
+            }
         }
 
         IconButton(
@@ -318,6 +328,17 @@ fun MediaViewerDialog(items: List<Pair<File, AttachmentType>>, startIndex: Int, 
                 .background(Color.Black.copy(alpha = 0.5f), CircleShape),
         ) {
             Icon(Icons.Default.Download, contentDescription = tr("Phone me save karo", "Save to phone"), tint = Color.White)
+        }
+        if (items[pagerState.currentPage].second != AttachmentType.VIDEO) {
+            IconButton(
+                onClick = { annotating = items[pagerState.currentPage].first },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 68.dp, top = 12.dp)
+                    .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+            ) {
+                Icon(Icons.Default.Draw, contentDescription = tr("Photo pe likho", "Draw on photo"), tint = Color.White)
+            }
         }
 
         if (items.size > 1) {

@@ -7,6 +7,7 @@
 ## Features
 
 - **Rich notes**: title, deck (subject), keywords, formatted text, plus camera/gallery photos, a handwriting pad, voice recordings, videos and documents (PDF, Markdown, text and HTML open in Yaad's own viewer, with pinch zoom for PDFs; Word, PowerPoint and the rest open in the app that handles them). Any attachment can be saved back to the phone.
+- **Annotate and edit**: draw on photos and PDF pages (pen, bold, highlighter, eraser, undo; two fingers zoom). A stylus works too, with palm rejection: once a stylus is used, fingers only move the page, and the stylus eraser end erases. Drawings on photos are saved into the image; PDF annotations are kept beside the PDF (so pages stay sharp) and drawn into the copy when you save or share it. Markdown, text and HTML files can be edited in place.
 - **Spaced repetition**: each review is rated *Bhool gaya* (forgot), *Thoda* (partly) or *Yaad tha* (remembered). Forgot restarts the schedule, partly repeats the current gap, remembered moves to the next one. Each rating button shows when the note will come back.
 - **Active recall**: only the title is shown first; tap to reveal keywords, notes and attachments.
 - **Daily digests**: any number of reminder times per day, each with its own toggle, plus a master switch. Notifications have *Revise* and *Snooze 1h* actions and survive reboots.

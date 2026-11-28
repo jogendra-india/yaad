@@ -28,6 +28,7 @@ class AttachmentStore(private val context: Context) {
 
     fun delete(name: String) {
         file(name).delete()
+        file(name + INK_SUFFIX).delete()
     }
 
     /** Downscales a freshly captured camera photo in place and applies EXIF rotation. */
@@ -115,6 +116,8 @@ class AttachmentStore(private val context: Context) {
     }.getOrNull()
 
     companion object {
+        /** PDF annotations live beside the PDF as `<file name>.ink.json`. */
+        const val INK_SUFFIX = ".ink.json"
         private const val MAX_SIDE = 1600
         private const val JPEG_QUALITY = 85
         private const val NAME_SEPARATOR = "~"
