@@ -10,7 +10,6 @@
 - **Annotate and edit**: draw on photos and PDF pages (pen, bold, highlighter, eraser, undo; two fingers zoom). A stylus works too, with palm rejection: once a stylus is used, fingers only move the page, and the stylus eraser end erases. Drawings on photos are saved into the image; PDF annotations are kept beside the PDF (so pages stay sharp) and drawn into the copy when you save or share it. Markdown, text and HTML files can be edited in place.
 - **Spaced repetition**: each review is rated *Bhool gaya* (forgot), *Thoda* (partly) or *Yaad tha* (remembered). Forgot restarts the schedule, partly repeats the current gap, remembered moves to the next one. Each rating button shows when the note will come back.
 - **Active recall**: only the title is shown first; tap to reveal keywords, notes and attachments. The pencil in the review bar edits the current card and brings you back to it.
-- **Links**: web links in a note (like the source page a browser clip came from) show as tappable rows under the note and open in the browser.
 - **Copy anything**: long-press to select and copy text on every screen except review and practice (and in the Markdown/HTML viewers).
 - **Daily digests**: any number of reminder times per day, each with its own toggle, plus a master switch. Notifications have *Revise* and *Snooze 1h* actions and survive reboots.
 - **Decks and stars**: browse notes by deck (each note shows when it was added), star important ones, search across titles, keywords and notes, and run a practice session over any deck without touching its schedule.

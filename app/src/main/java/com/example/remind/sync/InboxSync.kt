@@ -273,7 +273,7 @@ object InboxSync {
 
     /**
      * The extension sends rich-text HTML; the source link goes on as its own paragraph, as a
-     * real link. The note page also shows it as a tappable row (see NoteLinks).
+     * real link. Tapping it opens the page.
      */
     private fun bodyFor(entry: RemoteEntry): String {
         val body = entry.body
