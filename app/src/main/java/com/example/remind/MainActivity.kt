@@ -67,6 +67,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by repo.themeMode.collectAsStateWithLifecycle()
             val dynamicColor by repo.dynamicColor.collectAsStateWithLifecycle()
+            val readingFont by repo.readingFont.collectAsStateWithLifecycle()
             val dark = isAppInDarkTheme(themeMode)
 
             DisposableEffect(dark) {
@@ -79,7 +80,7 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
 
-            RemindTheme(dark = dark, dynamicColor = dynamicColor) {
+            RemindTheme(dark = dark, dynamicColor = dynamicColor, readingFont = readingFont) {
                 RequestNotificationPermission()
                 RemindNavHost(reviewRequest)
             }

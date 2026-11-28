@@ -40,6 +40,15 @@ class Repository(
         _themeMode.value = mode
     }
 
+    /** Atkinson Hyperlegible Next everywhere (default); off = the phone's system font. */
+    private val _readingFont = MutableStateFlow(prefs.getBoolean(KEY_READING_FONT, true))
+    val readingFont: StateFlow<Boolean> = _readingFont
+
+    fun setReadingFont(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_READING_FONT, enabled).apply()
+        _readingFont.value = enabled
+    }
+
     fun setDynamicColor(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_DYNAMIC, enabled).apply()
         _dynamicColor.value = enabled
@@ -301,6 +310,7 @@ class Repository(
         const val KEY_SEEDED = "seeded"
         const val KEY_THEME = "theme_mode"
         const val KEY_DYNAMIC = "dynamic_color"
+        const val KEY_READING_FONT = "reading_font"
         const val KEY_REMINDERS = "reminders_enabled"
         const val KEY_RANDOM = "random_enabled"
         const val KEY_RANDOM_START = "random_start_minute"

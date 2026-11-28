@@ -158,11 +158,13 @@ private fun openLink(context: Context, url: String) {
 private fun MarkdownView(file: File) {
     val context = LocalContext.current
     val colors = MaterialTheme.colorScheme
-    val page by produceState<String?>(null, file, colors) {
+    val readingFont = MaterialTheme.typography.bodyLarge.fontFamily == ReadingFont
+    val page by produceState<String?>(null, file, colors, readingFont) {
         value = withContext(Dispatchers.IO) {
             val text = runCatching { file.readText() }.getOrElse { "" }
             val marked = context.assets.open("viewer/marked.min.js").bufferedReader().use { it.readText() }
-            buildPage(text, markdown = isMarkdown(file), marked = marked, css = viewerCss(colors))
+            val fontCss = if (readingFont) readingFontCss(context) else ""
+            buildPage(text, markdown = isMarkdown(file), marked = marked, css = fontCss + viewerCss(colors, readingFont))
         }
     }
     val html = page
@@ -200,10 +202,21 @@ private fun MarkdownView(file: File) {
     )
 }
 
-private fun viewerCss(c: androidx.compose.material3.ColorScheme): String = """
+/** The app's reading font for the WebView, inlined as data: URLs (the page has no file access). */
+private fun readingFontCss(context: Context): String {
+    fun face(res: Int, style: String): String {
+        val bytes = context.resources.openRawResource(res).use { it.readBytes() }
+        val b64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+        return "@font-face { font-family: 'Reading'; font-style: $style; font-weight: 200 800; " +
+            "src: url(data:font/ttf;base64,$b64) format('truetype'); }\n"
+    }
+    return face(com.example.remind.R.font.atkinson_next, "normal") + face(com.example.remind.R.font.atkinson_next_italic, "italic")
+}
+
+private fun viewerCss(c: androidx.compose.material3.ColorScheme, readingFont: Boolean): String = """
     :root { color-scheme: light dark; }
     html, body { margin: 0; background: ${cssColor(c.background)}; color: ${cssColor(c.onBackground)}; }
-    body { font-family: system-ui, -apple-system, Roboto, sans-serif; font-size: 16px; line-height: 1.6;
+    body { font-family: ${if (readingFont) "'Reading', " else ""}system-ui, Roboto, sans-serif; font-size: 17px; line-height: 1.6;
            padding: 16px 18px 48px; word-wrap: break-word; overflow-wrap: anywhere; }
     h1, h2, h3, h4, h5, h6 { line-height: 1.3; margin: 1.4em 0 .5em; }
     h1 { font-size: 1.6em; } h2 { font-size: 1.35em; } h3 { font-size: 1.15em; }

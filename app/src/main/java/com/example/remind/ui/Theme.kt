@@ -11,7 +11,14 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import com.example.remind.R
 import com.example.remind.data.ThemeMode
 
 private val LightColors = lightColorScheme(
@@ -81,6 +88,35 @@ private val DarkColors = darkColorScheme(
 /** Star colour that reads well on both themes. */
 val StarColor = Color(0xFFF5B400)
 
+/**
+ * Atkinson Hyperlegible Next (Braille Institute, SIL OFL), bundled so it works offline.
+ * Built for legibility: letters that are easy to mix up (I l 1, 0 O, rn m) are drawn
+ * clearly different, which helps with keywords, formulas and Roman-script Hinglish.
+ * One variable file per style; each weight picks its point on the wght axis.
+ */
+@OptIn(ExperimentalTextApi::class)
+private fun atkinson(weight: Int, italic: Boolean) = Font(
+    if (italic) R.font.atkinson_next_italic else R.font.atkinson_next,
+    weight = FontWeight(weight),
+    style = if (italic) FontStyle.Italic else FontStyle.Normal,
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight)),
+)
+
+val ReadingFont = FontFamily(
+    listOf(300, 400, 500, 600, 700, 800).flatMap { listOf(atkinson(it, false), atkinson(it, true)) }
+)
+
+private fun Typography.withFont(family: FontFamily): Typography {
+    fun TextStyle.f() = copy(fontFamily = family)
+    return copy(
+        displayLarge = displayLarge.f(), displayMedium = displayMedium.f(), displaySmall = displaySmall.f(),
+        headlineLarge = headlineLarge.f(), headlineMedium = headlineMedium.f(), headlineSmall = headlineSmall.f(),
+        titleLarge = titleLarge.f(), titleMedium = titleMedium.f(), titleSmall = titleSmall.f(),
+        bodyLarge = bodyLarge.f(), bodyMedium = bodyMedium.f(), bodySmall = bodySmall.f(),
+        labelLarge = labelLarge.f(), labelMedium = labelMedium.f(), labelSmall = labelSmall.f(),
+    )
+}
+
 private val BaseTypography = Typography()
 private val AppTypography = BaseTypography.copy(
     headlineLarge = BaseTypography.headlineLarge.copy(fontWeight = FontWeight.SemiBold),
@@ -89,6 +125,7 @@ private val AppTypography = BaseTypography.copy(
     titleLarge = BaseTypography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
     titleMedium = BaseTypography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
 )
+private val ReadingTypography = AppTypography.withFont(ReadingFont)
 
 @Composable
 fun isAppInDarkTheme(mode: ThemeMode): Boolean = when (mode) {
@@ -100,7 +137,7 @@ fun isAppInDarkTheme(mode: ThemeMode): Boolean = when (mode) {
 val supportsDynamicColor get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
 @Composable
-fun RemindTheme(dark: Boolean, dynamicColor: Boolean, content: @Composable () -> Unit) {
+fun RemindTheme(dark: Boolean, dynamicColor: Boolean, readingFont: Boolean = true, content: @Composable () -> Unit) {
     val context = LocalContext.current
     val colors = when {
         dynamicColor && supportsDynamicColor ->
@@ -108,5 +145,5 @@ fun RemindTheme(dark: Boolean, dynamicColor: Boolean, content: @Composable () ->
         dark -> DarkColors
         else -> LightColors
     }
-    MaterialTheme(colorScheme = colors, typography = AppTypography, content = content)
+    MaterialTheme(colorScheme = colors, typography = if (readingFont) ReadingTypography else AppTypography, content = content)
 }

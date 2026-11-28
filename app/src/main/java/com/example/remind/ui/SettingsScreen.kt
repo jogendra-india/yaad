@@ -1,5 +1,6 @@
 package com.example.remind.ui
 
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Alarm
 
 import com.example.remind.notify.DigestScheduler
@@ -114,6 +115,7 @@ class SettingsViewModel(val repo: Repository, private val backup: Backup) : View
     val digests = repo.observeDigests().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val themeMode = repo.themeMode
     val dynamicColor = repo.dynamicColor
+    val readingFont = repo.readingFont
     val remindersEnabled = repo.remindersEnabled
 
     fun setRemindersEnabled(enabled: Boolean) = viewModelScope.launch { repo.setRemindersEnabled(enabled) }
@@ -173,6 +175,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenHistory: () -> Unit, vm: SettingsVi
     val digests by vm.digests.collectAsStateWithLifecycle()
     val themeMode by vm.themeMode.collectAsStateWithLifecycle()
     val dynamicColor by vm.dynamicColor.collectAsStateWithLifecycle()
+    val readingFont by vm.readingFont.collectAsStateWithLifecycle()
     val remindersOn by vm.remindersEnabled.collectAsStateWithLifecycle()
     val randomOn by vm.randomEnabled.collectAsStateWithLifecycle()
     val randomStart by vm.randomStart.collectAsStateWithLifecycle()
@@ -260,6 +263,18 @@ fun SettingsScreen(onBack: () -> Unit, onOpenHistory: () -> Unit, vm: SettingsVi
                         ) { Text(label) }
                     }
                 }
+                ListItem(
+                    headlineContent = { Text(tr("Padhne wala font", "Reading font")) },
+                    supportingContent = {
+                        Text(
+                            if (readingFont) tr("Atkinson Hyperlegible: saaf, aasaani se padhne layak", "Atkinson Hyperlegible: clear and easy to read")
+                            else tr("Phone ka system font", "Your phone's system font"),
+                        )
+                    },
+                    leadingContent = { Icon(Icons.Default.TextFields, null) },
+                    trailingContent = { Switch(checked = readingFont, onCheckedChange = vm.repo::setReadingFont) },
+                    colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                )
                 if (supportsDynamicColor) {
                     ListItem(
                         headlineContent = { Text("Material You colours") },

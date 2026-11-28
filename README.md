@@ -13,6 +13,7 @@
 - **Decks and stars**: browse notes by deck (each note shows when it was added), star important ones, search across titles, keywords and notes, and run a practice session over any deck without touching its schedule.
 - **Custom schedules**: set a default interval list and override it per note.
 - **Backup**: export or import everything (notes, media, history, settings) as a single `.zip`.
+- **Reading font**: [Atkinson Hyperlegible Next](https://www.brailleinstitute.org/freefont/) by default (Braille Institute, built for legibility: I/l/1 and 0/O look clearly different), bundled so it works offline. Settings → Reading font switches back to the system font.
 - **Day / Night / System theme**, optional Material You colours, and animated transitions.
 - **Inbox sync (optional)**: send notes, screenshots, drawings, voice, video and documents from Chrome with the [browser extension](extension/), then pull down on Home (or tap **Sync**) to bring them in. Needs your own server (see [Sync](#sync)).
 - **Offline first**: no account. The app only goes online when you tap *Check for update* or *Sync*.
@@ -38,7 +39,7 @@ The server API is five endpoints, all authenticated with the `X-Yaad-Key` header
 
 ## Tech
 
-Kotlin, Jetpack Compose (Material 3), Navigation Compose, Room, AlarmManager (inexact, doze-friendly), Coil (images and video frames), PdfRenderer (PDF pages), [marked](https://github.com/markedjs/marked) (MIT, bundled in `app/src/main/assets/viewer/`) for Markdown in an offline WebView. Min SDK 26, target SDK 35.
+Kotlin, Jetpack Compose (Material 3), Navigation Compose, Room, AlarmManager (inexact, doze-friendly), Coil (images and video frames), PdfRenderer (PDF pages), [marked](https://github.com/markedjs/marked) (MIT, bundled in `app/src/main/assets/viewer/`) for Markdown in an offline WebView. Atkinson Hyperlegible Next fonts are under the SIL Open Font License (`app/src/main/assets/viewer/OFL-AtkinsonHyperlegibleNext.txt`). Min SDK 26, target SDK 35.
 
 ## Build
 
