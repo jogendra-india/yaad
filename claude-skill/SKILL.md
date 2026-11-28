@@ -36,7 +36,18 @@ and to pull down on Home in the app to sync.
   No headings, tables, images-in-HTML, code blocks or styles (put code in a `<p>` as plain text).
   Plain text also works (each line becomes a paragraph). Write the body to a file
   in the scratchpad with the Write tool (avoids shell quoting / backslash problems) and pass `--body-file`.
-- **Language** — match how the user said it (Hinglish is fine).
+- **Language — Hinglish by default.** Write the title and body in easy, conversational Hinglish
+  (Roman script, the way the user talks), unless the user specifically asks for English.
+  Keep technical terms in English (GIL, thread, NPSH, commit).
+- **Explain it, don't just state it.** The body should leave the user understanding the idea:
+  1. one or two lines on what it is and why it matters;
+  2. **always one easy example**: a real-life analogy, or a tiny concrete case with numbers or code,
+     marked with <b>Example:</b>;
+  3. optionally a one-line gotcha or a trick to remember it.
+  Sample body: <p><b>GIL</b> matlab Python me ek time pe sirf ek thread Python code chala sakta hai.</p>
+  <p><b>Example:</b> ek kitchen, ek hi chulha: 4 cook (threads) hain par khana ek hi bana sakta hai.
+  Lekin jab koi cook doodh ubalne ka wait kar raha hai (I/O), chulha dusre ko mil jata hai. Isliye I/O wale kaam threads se fast hote hain, CPU wale nahi.</p>
+  <ul><li>CPU-heavy kaam: multiprocessing use karo</li></ul>
 - One learning per note. If they give several, push several notes.
 
 ### Attachments (optional)
@@ -56,7 +67,13 @@ python ~/.claude/skills/yaad/yaad_push.py --title "..." --body-file note.html --
   Anything else (.py, .json, .zip...) gets a 400 error, so copy it to `<name>.txt` and attach that.
 - The total is capped at about 90 MB per note. Split bigger sets across notes.
 - Quote Windows paths and use forward slashes.
-- On the phone, documents open in whichever app handles them, and photos and videos show inline.
+- **Yaad opens PDF, Markdown (.md) and text (.txt) files in its own viewer** (app 1.14+): Markdown is formatted
+  with headings, tables, code and lists, and PDFs show every page with pinch zoom.
+  Use this when a learning needs more than the short body: a cheat sheet, a long explanation, a table,
+  code or a diagram-heavy PDF. Write a `.md` (Hinglish too, with examples) and attach it;
+  keep the body as the short recall version and say "Details: attached .md".
+- Word, PowerPoint, Excel and the rest open in whichever app on the phone handles them.
+  Photos and videos show inline.
 - Check the `attachments` list in the 201 reply: it should have one item per file.
 - If the user asks for a document you have to write yourself (a summary or cheat sheet), write it to the scratchpad and attach it.
 - Attach only files the user pointed at or that you made for the note.
