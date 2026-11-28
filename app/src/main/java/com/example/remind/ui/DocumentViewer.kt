@@ -82,12 +82,14 @@ import java.io.File
 
 private val MARKDOWN_EXTENSIONS = setOf("md", "markdown", "mdown", "mkd")
 private val TEXT_EXTENSIONS = setOf("txt", "text", "log")
+private val HTML_EXTENSIONS = setOf("html", "htm", "xhtml")
 
 private fun isMarkdown(file: File) = file.extension.lowercase() in MARKDOWN_EXTENSIONS
 private fun isPlainText(file: File) = file.extension.lowercase() in TEXT_EXTENSIONS
+private fun isHtml(file: File) = file.extension.lowercase() in HTML_EXTENSIONS
 
-/** Documents Yaad shows itself: PDF, Markdown and plain text. Everything else opens in another app. */
-fun canViewInApp(file: File) = isPdf(file) || isMarkdown(file) || isPlainText(file)
+/** Documents Yaad shows itself: PDF, Markdown, plain text and HTML. Everything else opens in another app. */
+fun canViewInApp(file: File) = isPdf(file) || isMarkdown(file) || isPlainText(file) || isHtml(file)
 
 /** Full-screen in-app viewer with buttons to open the file in another app or save it to the phone. */
 @Composable
@@ -123,7 +125,11 @@ fun DocumentViewerDialog(file: File, onDismiss: () -> Unit) {
                     }
                 }
                 Box(Modifier.weight(1f).fillMaxWidth()) {
-                    if (isPdf(file)) PdfPages(file) else MarkdownView(file)
+                    when {
+                        isPdf(file) -> PdfPages(file)
+                        isHtml(file) -> HtmlView(file)
+                        else -> MarkdownView(file)
+                    }
                 }
             }
         }
@@ -265,6 +271,60 @@ private fun buildPage(text: String, markdown: Boolean, marked: String, css: Stri
         try { $render } catch (e) { document.getElementById('doc').textContent = src; }</script>
         </body></html>
     """.trimIndent()
+}
+
+// ---------------------------------------------------------------- HTML
+
+/**
+ * An HTML file shown as the page it is: its own styles and scripts run, so self-contained
+ * pages (cheat sheets, charts, exported notes) look as they did on the computer. It runs
+ * without access to the phone's files and without any bridge into the app; pages that load
+ * scripts, fonts or images from the web need the internet for those parts. Links open in the
+ * browser, and pinch zoom works.
+ */
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+private fun HtmlView(file: File) {
+    val html by produceState<String?>(null, file) {
+        value = withContext(Dispatchers.IO) { runCatching { file.readText() }.getOrElse { "" } }
+    }
+    val page = html
+    if (page == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        return
+    }
+    AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = { ctx ->
+            WebView(ctx).apply {
+                setBackgroundColor(AndroidColor.WHITE)
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.allowFileAccess = false
+                settings.allowContentAccess = false
+                settings.useWideViewPort = true
+                settings.loadWithOverviewMode = true
+                settings.builtInZoomControls = true
+                settings.displayZoomControls = false
+                webViewClient = object : WebViewClient() {
+                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                        val url = request.url.toString()
+                        // In-page anchors stay here; anything else is a real link.
+                        if (url.startsWith("about:")) return false
+                        if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("mailto:")) openLink(ctx, url)
+                        return true
+                    }
+                }
+            }
+        },
+        update = {
+            if (it.tag != page) {
+                it.tag = page
+                it.loadDataWithBaseURL(null, page, "text/html", "utf-8", null)
+            }
+        },
+        onRelease = { it.destroy() },
+    )
 }
 
 // ---------------------------------------------------------------- PDF

@@ -20,7 +20,7 @@ Click the toolbar icon to open the side panel, or right-click a selection, image
   - **Video**: copy a video file in your file manager and press Ctrl+V, drop it, or use **Add file**.
   - **Handwriting**: **Draw** opens a white canvas (mouse, touch or pen) with colours, widths and undo.
   - **Voice**: **Record voice** records from the microphone; audio files can be pasted or dropped too.
-  - **Document**: PDF, Word, PowerPoint, Excel, OpenDocument, RTF, EPUB, CSV, TXT, Markdown. Copy the file and press Ctrl+V, drop it, or use **Add file**. On the phone it opens in whichever app handles it.
+  - **Document**: PDF, Word, PowerPoint, Excel, OpenDocument, RTF, EPUB, CSV, TXT, Markdown, HTML. Copy the file and press Ctrl+V, drop it, or use **Add file**. On the phone, PDF, Markdown, text and HTML open in Yaad itself; the rest in whichever app handles them.
 - Up to 90 MB of attachments per note.
 
 The text you type is kept if the panel closes; attachments are not.

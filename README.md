@@ -6,7 +6,7 @@
 
 ## Features
 
-- **Rich notes**: title, deck (subject), keywords, formatted text, plus camera/gallery photos, a handwriting pad, voice recordings, videos and documents (PDF, Markdown and text open in Yaad's own viewer, with pinch zoom for PDFs; Word, PowerPoint and the rest open in the app that handles them). Any attachment can be saved back to the phone.
+- **Rich notes**: title, deck (subject), keywords, formatted text, plus camera/gallery photos, a handwriting pad, voice recordings, videos and documents (PDF, Markdown, text and HTML open in Yaad's own viewer, with pinch zoom for PDFs; Word, PowerPoint and the rest open in the app that handles them). Any attachment can be saved back to the phone.
 - **Spaced repetition**: each review is rated *Bhool gaya* (forgot), *Thoda* (partly) or *Yaad tha* (remembered). Forgot restarts the schedule, partly repeats the current gap, remembered moves to the next one. Each rating button shows when the note will come back.
 - **Active recall**: only the title is shown first; tap to reveal keywords, notes and attachments.
 - **Daily digests**: any number of reminder times per day, each with its own toggle, plus a master switch. Notifications have *Revise* and *Snooze 1h* actions and survive reboots.

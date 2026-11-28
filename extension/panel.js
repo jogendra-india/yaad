@@ -16,10 +16,10 @@ const progress = $("progress");
 const saveButton = $("save");
 
 const SUBJECT_HISTORY_MAX = 50;
-// Documents the server accepts (by extension); they open in another app on the phone.
+// Documents the server accepts (by extension). PDF, Markdown, text and HTML open in Yaad itself; the rest in another app.
 const DOCUMENT_EXTENSIONS = [
   "pdf", "doc", "docx", "ppt", "pptx", "pps", "ppsx", "xls", "xlsx",
-  "csv", "txt", "md", "rtf", "odt", "ods", "odp", "epub",
+  "csv", "txt", "md", "html", "htm", "rtf", "odt", "ods", "odp", "epub",
 ];
 const EXTENSION_KINDS = {
   jpg: "photo", jpeg: "photo", png: "photo", gif: "photo", webp: "photo", bmp: "photo", heic: "photo",
