@@ -58,6 +58,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.Edit
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -188,6 +191,19 @@ class ReviewViewModel(
         }
     }
 
+    /** Note opened in the editor from this session; reloaded when the screen comes back. */
+    var editingId: Long? = null
+
+    /** Picks up edits to one note (or drops it if it was deleted), keeping the place in the queue. */
+    fun reload(id: Long) {
+        viewModelScope.launch {
+            val fresh = repo.get(id)
+            notes = notes?.let { list ->
+                if (fresh == null) list.filterNot { it.note.id == id } else list.map { if (it.note.id == id) fresh else it }
+            }
+        }
+    }
+
     fun toggleStar(item: NoteWithAttachments) {
         val updated = !item.note.starred
         notes = notes?.map { if (it.note.id == item.note.id) it.copy(note = it.note.copy(starred = updated)) else it }
@@ -212,8 +228,18 @@ class ReviewViewModel(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReviewScreen(onClose: () -> Unit, vm: ReviewViewModel = viewModel(factory = ReviewViewModel.Factory)) {
+fun ReviewScreen(
+    onClose: () -> Unit,
+    onEdit: (Long) -> Unit,
+    vm: ReviewViewModel = viewModel(factory = ReviewViewModel.Factory),
+) {
     val context = LocalContext.current
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        vm.editingId?.let {
+            vm.editingId = null
+            vm.reload(it)
+        }
+    }
     LaunchedEffect(Unit) { if (!vm.practice) Notifications.cancelAll(context) }
 
     val total = vm.total
@@ -237,6 +263,14 @@ fun ReviewScreen(onClose: () -> Unit, vm: ReviewViewModel = viewModel(factory = 
                                 "${vm.index + 1}/$total",
                                 style = MaterialTheme.typography.labelLarge,
                             )
+                            vm.current?.let { item ->
+                                IconButton(onClick = {
+                                    vm.editingId = item.note.id
+                                    onEdit(item.note.id)
+                                }) {
+                                    Icon(Icons.Default.Edit, contentDescription = tr("Is note ko edit karo", "Edit this note"))
+                                }
+                            }
                             IconButton(onClick = vm::toggleFullView) {
                                 Icon(
                                     if (vm.fullView) Icons.Default.Style else Icons.Default.ViewCarousel,

@@ -15,7 +15,7 @@ android {
         targetSdk = 35
         // CI passes the GitHub run number so every build installs over the last one.
         versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 13
-        versionName = "1.17"
+        versionName = "1.18"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

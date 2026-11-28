@@ -166,7 +166,7 @@ private fun RemindNavHost(reviewRequest: Int) {
         popEnterTransition = { back() },
         popExitTransition = { backExit() },
     ) {
-        composable(Routes.HOME) {
+        composable(Routes.HOME) { Selectable {
             HomeScreen(
                 onAdd = { nav.navigate(Routes.edit()) },
                 onOpenNote = { nav.navigate(Routes.note(it)) },
@@ -174,36 +174,37 @@ private fun RemindNavHost(reviewRequest: Int) {
                 onOpenLibrary = { deck, starred -> nav.navigate(Routes.library(deck, starred)) },
                 onSettings = { nav.navigate(Routes.SETTINGS) },
             )
-        }
+        } }
         composable(
             Routes.LIBRARY,
             arguments = listOf(
                 navArgument("deck") { type = NavType.StringType; nullable = true; defaultValue = null },
                 navArgument("starred") { type = NavType.BoolType; defaultValue = false },
             ),
-        ) {
+        ) { Selectable {
             LibraryScreen(
                 onBack = { nav.popBackStack() },
                 onOpenNote = { nav.navigate(Routes.note(it)) },
                 onPractice = { deck, starred -> nav.navigate(Routes.review(deck = deck, starred = starred)) },
             )
-        }
+        } }
         composable(
             Routes.EDIT,
             arguments = listOf(navArgument("noteId") { type = NavType.LongType; defaultValue = -1L }),
         ) {
+            // Text fields have their own select/copy/paste.
             EditNoteScreen(onBack = { nav.popBackStack() }, onSaved = { nav.popBackStack() })
         }
         composable(
             Routes.NOTE,
             arguments = listOf(navArgument("noteId") { type = NavType.LongType }),
-        ) {
+        ) { Selectable {
             NoteDetailScreen(
                 onBack = { nav.popBackStack() },
                 onEdit = { nav.navigate(Routes.edit(it)) },
                 onRevise = { nav.navigate(Routes.review(noteId = it)) },
             )
-        }
+        } }
         composable(
             Routes.REVIEW,
             arguments = listOf(
@@ -214,13 +215,21 @@ private fun RemindNavHost(reviewRequest: Int) {
             enterTransition = { slideInVertically(tween(DURATION)) { it / 3 } + fadeIn(tween(DURATION)) },
             popExitTransition = { slideOutVertically(tween(DURATION)) { it / 3 } + fadeOut(tween(DURATION / 2)) },
         ) {
-            ReviewScreen(onClose = { nav.popBackStack() })
+            // Flashcards stay unselectable on purpose (tap to reveal / swipe). Edit opens the
+            // editor; closing or saving it comes straight back to the same card.
+            ReviewScreen(onClose = { nav.popBackStack() }, onEdit = { nav.navigate(Routes.edit(it)) })
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = { nav.popBackStack() }, onOpenHistory = { nav.navigate(Routes.HISTORY) })
+            Selectable { SettingsScreen(onBack = { nav.popBackStack() }, onOpenHistory = { nav.navigate(Routes.HISTORY) }) }
         }
         composable(Routes.HISTORY) {
-            NotificationHistoryScreen(onBack = { nav.popBackStack() }, onOpenNote = { nav.navigate(Routes.note(it)) })
+            Selectable { NotificationHistoryScreen(onBack = { nav.popBackStack() }, onOpenNote = { nav.navigate(Routes.note(it)) }) }
         }
     }
+}
+
+/** Long-press any text on the screen to select and copy it. */
+@Composable
+private fun Selectable(content: @Composable () -> Unit) {
+    androidx.compose.foundation.text.selection.SelectionContainer { content() }
 }
