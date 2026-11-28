@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Yaad Inbox",
+  "version": "1.0.0",
+  "description": "Send notes, screenshots, drawings, voice and video to your Yaad inbox. Tap Sync in the Yaad app to pull them in.",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage", "sidePanel", "contextMenus"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Open Yaad Inbox" },
+  "side_panel": { "default_path": "panel.html" },
+  "options_page": "options.html"
+}

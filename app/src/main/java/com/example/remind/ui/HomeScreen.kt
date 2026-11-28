@@ -156,6 +156,7 @@ fun HomeScreen(
             TopAppBar(
                 title = { HomeTitle() },
                 actions = {
+                    SyncAction()
                     IconButton(onClick = { onOpenLibrary(null, false) }) {
                         Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = "Library")
                     }

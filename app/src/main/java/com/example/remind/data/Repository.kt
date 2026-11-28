@@ -147,6 +147,43 @@ class Repository(
         return noteId
     }
 
+    // Inbox sync
+
+    /** Chunked: SQLite caps bound parameters per query (999 on older devices). */
+    suspend fun existingRemoteIds(remoteIds: List<String>): Set<String> =
+        remoteIds.chunked(500).flatMap { db.notes().existingRemoteIds(it) }.toSet()
+
+    /**
+     * Saves a note pulled from the inbox together with its already-downloaded files, in one
+     * transaction. Returns false (and saves nothing) when a note with this remoteId already exists.
+     */
+    suspend fun insertSyncedNote(
+        remoteId: String,
+        title: String,
+        body: String,
+        subject: String,
+        keywords: List<String>,
+        createdAt: Long,
+        attachments: List<DraftAttachment>,
+    ): Boolean = db.withTransaction {
+        if (db.notes().existingRemoteIds(listOf(remoteId)).isNotEmpty()) return@withTransaction false
+        val intervals = defaultIntervals
+        val id = db.notes().insert(
+            Note(
+                title = title,
+                body = body,
+                subject = subject,
+                keywords = keywords,
+                intervals = intervals,
+                nextDueDay = Scheduler.firstDueDay(intervals, today()),
+                createdAt = createdAt,
+                remoteId = remoteId,
+            )
+        )
+        attachments.forEach { db.attachments().insert(Attachment(noteId = id, fileName = it.fileName, type = it.type)) }
+        true
+    }
+
     suspend fun review(noteId: Long, result: ReviewResult) {
         val note = db.notes().get(noteId)?.note ?: return
         val day = today()

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Yaad Inbox</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="panel">
+  <header>
+    <h1>New note</h1>
+    <a href="options.html" target="_blank" id="settings-link">Settings</a>
+  </header>
+  <p id="setup" class="status error" hidden>Set the server URL and key in <a href="options.html" target="_blank">Settings</a> first.</p>
+
+  <label for="title">Title</label>
+  <input id="title" type="text" maxlength="300" autocomplete="off">
+
+  <label for="body">Body</label>
+  <textarea id="body" placeholder="Type or paste. Ctrl+V an image or a copied file to attach it."></textarea>
+
+  <label for="subject">Subject</label>
+  <input id="subject" type="text" maxlength="120" list="subjects" autocomplete="off" placeholder="Optional">
+  <datalist id="subjects"></datalist>
+
+  <label for="keywords">Keywords</label>
+  <input id="keywords" type="text" autocomplete="off" placeholder="Comma separated, optional">
+
+  <label for="source">Source link</label>
+  <input id="source" type="url" autocomplete="off" placeholder="Optional">
+
+  <div id="dropzone" class="dropzone">
+    Paste (Ctrl+V), drop files here, or
+    <div class="tools">
+      <button type="button" class="ghost" id="pick">Add file</button>
+      <button type="button" class="ghost" id="draw">Draw</button>
+      <button type="button" class="ghost" id="record">Record voice</button>
+    </div>
+    <input id="file-input" type="file" accept="image/*,audio/*,video/*" multiple hidden>
+  </div>
+  <p id="record-status" class="status" role="status"></p>
+
+  <div id="attachments" class="attachments"></div>
+
+  <div class="progress" id="progress" hidden><div></div></div>
+  <div class="save-row">
+    <button type="button" id="save">Save to inbox</button>
+    <button type="button" id="clear" class="ghost">Clear</button>
+  </div>
+  <p id="status" class="status" role="status"></p>
+
+  <div id="draw-overlay" class="overlay" hidden>
+    <div class="pens">
+      <button type="button" class="pen active" data-color="#1d1b18" style="background:#1d1b18" aria-label="Black pen"></button>
+      <button type="button" class="pen" data-color="#1e5bd8" style="background:#1e5bd8" aria-label="Blue pen"></button>
+      <button type="button" class="pen" data-color="#c62828" style="background:#c62828" aria-label="Red pen"></button>
+      <button type="button" class="pen" data-color="#2e7d32" style="background:#2e7d32" aria-label="Green pen"></button>
+      <select id="pen-width" aria-label="Pen width" style="width:auto">
+        <option value="2">Thin</option>
+        <option value="4" selected>Medium</option>
+        <option value="8">Thick</option>
+      </select>
+      <button type="button" class="ghost" id="undo">Undo</button>
+      <button type="button" class="ghost" id="erase-all">Clear</button>
+    </div>
+    <canvas id="canvas"></canvas>
+    <div class="row">
+      <button type="button" id="draw-done">Attach drawing</button>
+      <button type="button" class="ghost" id="draw-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <script src="common.js"></script>
+  <script src="panel.js"></script>
+</body>
+</html>

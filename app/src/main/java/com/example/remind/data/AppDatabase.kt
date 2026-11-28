@@ -73,6 +73,9 @@ interface NoteDao {
     @Query("SELECT * FROM notes")
     suspend fun allNotes(): List<Note>
 
+    @Query("SELECT remoteId FROM notes WHERE remoteId IN (:remoteIds)")
+    suspend fun existingRemoteIds(remoteIds: List<String>): List<String>
+
     @Insert
     suspend fun insert(note: Note): Long
 
@@ -166,9 +169,17 @@ private val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+/** v3 records which inbox entry a synced note came from. */
+private val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `notes` ADD COLUMN `remoteId` TEXT")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_notes_remoteId` ON `notes` (`remoteId`)")
+    }
+}
+
 @Database(
     entities = [Note::class, Attachment::class, ReviewLog::class, Digest::class, NotificationLog::class],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -182,7 +193,7 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "remind.db")
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
     }
 }

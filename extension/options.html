@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Yaad Inbox settings</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="page">
+  <h1>Yaad Inbox</h1>
+  <p class="hint">Notes you save here wait on your server until you tap <b>Sync</b> in the Yaad app.
+    Use the same server URL and key in the app (Settings → Sync).</p>
+
+  <label for="url">Server URL</label>
+  <input id="url" type="url" placeholder="https://your-server.example/api/yaad" autocomplete="off">
+
+  <label for="key">Key</label>
+  <div class="row">
+    <input id="key" type="password" autocomplete="off">
+    <button id="toggle-key" type="button" class="ghost">Show</button>
+  </div>
+
+  <div class="row actions">
+    <button id="save" type="button">Save</button>
+    <button id="test" type="button" class="ghost">Test connection</button>
+  </div>
+  <p id="status" class="status" role="status"></p>
+
+  <h2>Microphone</h2>
+  <p class="hint">Chrome asks for microphone access once, here. After that, voice notes record straight from the side panel.</p>
+  <div class="row actions">
+    <button id="mic" type="button" class="ghost">Allow microphone</button>
+  </div>
+  <p id="mic-status" class="status" role="status"></p>
+
+  <script src="common.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

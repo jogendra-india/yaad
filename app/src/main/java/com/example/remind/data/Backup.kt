@@ -124,6 +124,7 @@ class Backup(private val context: Context, private val repo: Repository) {
         put("starred", starred)
         put("createdAt", createdAt)
         put("lastReviewedAt", lastReviewedAt ?: JSONObject.NULL)
+        put("remoteId", remoteId ?: JSONObject.NULL)
     }
 
     private fun noteFromJson(o: JSONObject): Note {
@@ -142,6 +143,7 @@ class Backup(private val context: Context, private val repo: Repository) {
             starred = o.optBoolean("starred", false),
             createdAt = o.getLong("createdAt"),
             lastReviewedAt = if (o.isNull("lastReviewedAt")) null else o.getLong("lastReviewedAt"),
+            remoteId = if (o.isNull("remoteId")) null else o.optString("remoteId").ifEmpty { null },
         )
     }
 

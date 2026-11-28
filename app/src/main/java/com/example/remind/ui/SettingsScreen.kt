@@ -514,6 +514,10 @@ fun SettingsScreen(onBack: () -> Unit, onOpenHistory: () -> Unit, vm: SettingsVi
                 )
             }
 
+            SettingsSection("Sync") {
+                SyncSection()
+            }
+
             SettingsSection("Update") {
                 AppUpdateSection()
             }

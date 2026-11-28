@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 import androidx.room.Relation
 import androidx.room.TypeConverter
 
-@Entity(tableName = "notes")
+@Entity(tableName = "notes", indices = [Index(value = ["remoteId"], unique = true)])
 data class Note(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val title: String,
@@ -22,6 +22,8 @@ data class Note(
     val starred: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val lastReviewedAt: Long? = null,
+    /** Inbox entry id when the note came in through sync; guards against importing it twice. */
+    val remoteId: String? = null,
 )
 
 enum class AttachmentType { PHOTO, HANDWRITING, AUDIO, VIDEO }

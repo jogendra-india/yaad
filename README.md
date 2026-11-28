@@ -14,7 +14,27 @@
 - **Custom schedules**: set a default interval list and override it per note.
 - **Backup**: export or import everything (notes, media, history, settings) as a single `.zip`.
 - **Day / Night / System theme**, optional Material You colours, and animated transitions.
-- **Fully offline**: no account, no network permission.
+- **Inbox sync (optional)**: send notes, screenshots, drawings, voice and video from Chrome with the [browser extension](extension/), then tap **Sync** in the app to pull them in. Needs your own server (see [Sync](#sync)).
+- **Offline first**: no account. The app only goes online when you tap *Check for update* or *Sync*.
+
+## Sync
+
+Sync is one way and manual: the browser extension adds notes to an inbox on your server, and the app pulls them in only when you tap **Sync** (Home top bar, or Settings → Sync). A note is deleted from the server only after the phone has saved it, files included, so an interrupted sync never loses anything; the next tap picks up where it stopped.
+
+Set the same two values in the app (Settings → Sync) and in the extension (its Settings page):
+
+- **Server URL**: the inbox API base, e.g. `https://your-server.example/api/yaad`
+- **Key**: the inbox key issued by your server
+
+The server API is five endpoints, all authenticated with the `X-Yaad-Key` header:
+
+| Method | Path | Used by |
+|---|---|---|
+| `GET` | `/ping/` | both, to test the URL and key |
+| `POST` | `/entries/` | extension: multipart `title`, `body`, `subject`, `keywords[]`, `source_url`, `files[]`, `kinds[]` (`photo`, `handwriting`, `audio`, `video`) |
+| `GET` | `/entries/?limit=&offset=` | app: waiting entries, oldest first |
+| `GET` | `/attachments/<id>/` | app: one file |
+| `POST` | `/entries/ack/` | app: `{"ids": [...]}` once saved; the server deletes them |
 
 ## Tech
 
