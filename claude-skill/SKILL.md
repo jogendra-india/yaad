@@ -55,7 +55,7 @@ and to pull down on Home in the app to sync.
 Repeat `--file <path>` once per file; each can have a matching `--kind`
 (`photo`, `handwriting`, `audio`, `video`, `document`), given in the same order. Leave
 `--kind` out and it is guessed from the extension: images become `photo`, audio `audio`,
-video `video`, everything else (PDF, Word, PowerPoint, Excel, txt, md, csv...) `document`.
+video `video`, everything else (PDF, Word, PowerPoint, Excel, txt, md, html, csv...) `document`.
 Pass `--kind handwriting` for a sketch or drawing.
 
 ```sh
@@ -63,15 +63,22 @@ python ~/.claude/skills/yaad/yaad_push.py --title "..." --body-file note.html --
   --file "D:/path/datasheet.pdf" --file "D:/path/curve.png"
 ```
 
-- The server accepts only these document types: pdf, doc, docx, ppt, pptx, pps, ppsx, xls, xlsx, odt, ods, odp, rtf, epub, csv, txt, md.
+- The server accepts only these document types: pdf, doc, docx, ppt, pptx, pps, ppsx, xls, xlsx, odt, ods, odp, rtf, epub, csv, txt, md, html, htm.
   Anything else (.py, .json, .zip...) gets a 400 error, so copy it to `<name>.txt` and attach that.
 - The total is capped at about 90 MB per note. Split bigger sets across notes.
 - Quote Windows paths and use forward slashes.
-- **Yaad opens PDF, Markdown (.md) and text (.txt) files in its own viewer** (app 1.14+): Markdown is formatted
-  with headings, tables, code and lists, and PDFs show every page with pinch zoom.
+- **Yaad opens PDF, Markdown (.md), text (.txt) and HTML (.html) files in its own viewer** (app 1.14+, HTML 1.16+).
+  Markdown is formatted with headings, tables, code and lists, and PDFs show every page with pinch zoom.
+  HTML is shown as a real page with its own CSS and JS, which suits visual explainers, diagrams, charts,
+  interactive quizzes or flashcards.
+  Make HTML self-contained (inline CSS/JS, inline SVG for diagrams) so it works offline;
+  CDN scripts only load when the phone is online. Design for a phone screen: add
+  `<meta name="viewport" content="width=device-width, initial-scale=1">`, use a single column and
+  readable 16-18px text, and support dark mode via `prefers-color-scheme`.
   Use this when a learning needs more than the short body: a cheat sheet, a long explanation, a table,
-  code or a diagram-heavy PDF. Write a `.md` (Hinglish too, with examples) and attach it;
-  keep the body as the short recall version and say "Details: attached .md".
+  code or a diagram-heavy PDF. Write a `.md` (or a `.html` for something visual or interactive),
+  also in Hinglish with examples, and attach it;
+  keep the body as the short recall version and say "Details: attached file".
 - Word, PowerPoint, Excel and the rest open in whichever app on the phone handles them.
   Photos and videos show inline.
 - Check the `attachments` list in the 201 reply: it should have one item per file.
