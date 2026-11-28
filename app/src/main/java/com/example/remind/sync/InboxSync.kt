@@ -271,12 +271,16 @@ object InboxSync {
             ?: entry.subject.ifEmpty { tr("Web se note", "Web clip") }
     }
 
-    /** The extension sends rich-text HTML; the source link goes on as its own paragraph. */
+    /**
+     * The extension sends rich-text HTML; the source link goes on as its own paragraph, as a
+     * real link. The note page also shows it as a tappable row (see NoteLinks).
+     */
     private fun bodyFor(entry: RemoteEntry): String {
         val body = entry.body
-        if (entry.sourceUrl.isEmpty() || body.contains(entry.sourceUrl)) return body
-        if (RichNotes.isHtml(body)) return body + "<p>${escapeHtml(entry.sourceUrl)}</p>"
-        return if (body.isBlank()) entry.sourceUrl else "${body.trimEnd()}\n\n${entry.sourceUrl}"
+        val url = entry.sourceUrl
+        if (url.isEmpty() || body.contains(url) || body.contains(RichNotes.escape(url))) return body
+        val safe = RichNotes.escape(url)
+        return RichNotes.toHtml(body.trimEnd()) + "<p>Source: <a href=\"$safe\">$safe</a></p>"
     }
 
     private fun escapeHtml(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")

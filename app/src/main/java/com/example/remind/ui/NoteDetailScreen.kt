@@ -227,6 +227,7 @@ fun NoteDetailScreen(
 
             if (note.body.isNotBlank()) {
                 NotesText(note.body, style = MaterialTheme.typography.bodyLarge)
+                NoteLinks(note.body, Modifier.padding(top = 12.dp))
             }
 
             if (current.attachments.isNotEmpty()) {

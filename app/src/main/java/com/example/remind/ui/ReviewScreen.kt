@@ -447,6 +447,7 @@ private fun ReviewCard(item: NoteWithAttachments, vm: ReviewViewModel, revealed:
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         KeywordChips(note.keywords)
                         if (note.body.isNotBlank()) NotesText(note.body, style = MaterialTheme.typography.bodyLarge)
+                        NoteLinks(note.body)
                         if (item.attachments.isNotEmpty()) {
                             AttachmentGallery(item.attachments.map { vm.store.file(it.fileName) to it.type })
                         }
