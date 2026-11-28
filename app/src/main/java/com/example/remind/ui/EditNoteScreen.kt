@@ -478,6 +478,8 @@ fun EditNoteScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, vm: EditNoteView
         val item = vm.attachments.firstOrNull { it.fileName == name }
         if (item == null) {
             LaunchedEffect(name) { viewing = null }
+        } else if (item.type == AttachmentType.DOCUMENT && canViewInApp(store.file(name))) {
+            DocumentViewerDialog(store.file(name)) { viewing = null }
         } else if (item.type == AttachmentType.DOCUMENT) {
             LaunchedEffect(name) {
                 openExternally(context, store.file(name))

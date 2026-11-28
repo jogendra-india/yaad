@@ -26,7 +26,7 @@ data class Note(
     val remoteId: String? = null,
 )
 
-/** DOCUMENT is any other file (PDF, Word, PowerPoint…), opened in another app. */
+/** DOCUMENT is any other file: PDF, Markdown and text open in Yaad's viewer, the rest (Word, PowerPoint…) in another app. */
 enum class AttachmentType { PHOTO, HANDWRITING, AUDIO, VIDEO, DOCUMENT }
 
 @Entity(

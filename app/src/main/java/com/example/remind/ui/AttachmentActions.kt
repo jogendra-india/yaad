@@ -34,6 +34,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -173,12 +175,19 @@ fun DocumentThumbContent(file: File) {
     }
 }
 
-/** A document in a note: icon, name and size; tap to open it, or save a copy to the phone. */
+/** Opens a document: PDF, Markdown and text in Yaad's own viewer, anything else in another app. */
+fun openDocument(context: Context, file: File, showInApp: (File) -> Unit) {
+    if (canViewInApp(file)) showInApp(file) else openExternally(context, file)
+}
+
+/** A document in a note: icon, name and size; tap to view it, or save a copy to the phone. */
 @Composable
 fun DocumentRow(file: File, onSave: (File) -> Unit) {
     val context = LocalContext.current
+    var viewing by remember(file) { mutableStateOf(false) }
+    if (viewing) DocumentViewerDialog(file) { viewing = false }
     Surface(
-        onClick = { openExternally(context, file) },
+        onClick = { openDocument(context, file) { viewing = true } },
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.fillMaxWidth(),
