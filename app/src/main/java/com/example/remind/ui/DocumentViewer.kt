@@ -337,6 +337,7 @@ private fun PdfPages(file: File) {
 
     BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerLowest)) {
         val density = LocalDensity.current
+        val viewportWidth = maxWidth
         val viewportPx = with(density) { maxWidth.toPx() }
         val viewportHeightPx = with(density) { maxHeight.toPx() }
 
@@ -374,7 +375,7 @@ private fun PdfPages(file: File) {
                 }
                 .horizontalScroll(hScroll, enabled = zoom > 1f),
         ) {
-            val pageWidth = maxWidth * zoom
+            val pageWidth = viewportWidth * zoom
             // Render at the zoomed size, in steps so a pinch doesn't re-render every frame; capped for memory.
             val step = when {
                 zoom < 1.5f -> 1f
