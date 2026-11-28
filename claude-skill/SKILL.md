@@ -52,6 +52,8 @@ python ~/.claude/skills/yaad/yaad_push.py --title "..." --body-file note.html --
   --file "D:/path/datasheet.pdf" --file "D:/path/curve.png"
 ```
 
+- The server accepts only these document types: pdf, doc, docx, ppt, pptx, pps, ppsx, xls, xlsx, odt, ods, odp, rtf, epub, csv, txt, md.
+  Anything else (.py, .json, .zip...) gets a 400 error, so copy it to `<name>.txt` and attach that.
 - The total is capped at about 90 MB per note. Split bigger sets across notes.
 - Quote Windows paths and use forward slashes.
 - On the phone, documents open in whichever app handles them, and photos and videos show inline.
